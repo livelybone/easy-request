@@ -374,25 +374,25 @@ declare class Http {
     headers: HttpHeaders
   }>
 
-  get<T>(
+  get<T = any>(
     url: string,
     data?: RequestData,
     options?: Partial<Pick<HttpConfig, Exclude<keyof HttpConfig, 'method'>>>,
   ): Promise<T>
 
-  post<T>(
+  post<T = any>(
     url: string,
     data?: RequestData,
     options?: Partial<Pick<HttpConfig, Exclude<keyof HttpConfig, 'method'>>>,
   ): Promise<T>
 
-  put<T>(
+  put<T = any>(
     url: string,
     data?: RequestData,
     options?: Partial<Pick<HttpConfig, Exclude<keyof HttpConfig, 'method'>>>,
   ): Promise<T>
 
-  delete<T>(
+  delete<T = any>(
     url: string,
     data?: RequestData,
     options?: Partial<Pick<HttpConfig, Exclude<keyof HttpConfig, 'method'>>>,

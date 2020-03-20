@@ -193,7 +193,7 @@ export class Http {
       })
   }
 
-  get<T>(
+  get<T = any>(
     url: string,
     data?: RequestData,
     options?: Partial<Pick<HttpConfig, Exclude<keyof HttpConfig, 'method'>>>,
@@ -201,7 +201,7 @@ export class Http {
     return this.request<T>(url, data, { ...options, method: 'get' })
   }
 
-  post<T>(
+  post<T = any>(
     url: string,
     data?: RequestData,
     options?: Partial<Pick<HttpConfig, Exclude<keyof HttpConfig, 'method'>>>,
@@ -209,7 +209,7 @@ export class Http {
     return this.request<T>(url, data, { ...options, method: 'post' })
   }
 
-  put<T>(
+  put<T = any>(
     url: string,
     data?: RequestData,
     options?: Partial<Pick<HttpConfig, Exclude<keyof HttpConfig, 'method'>>>,
@@ -217,7 +217,7 @@ export class Http {
     return this.request<T>(url, data, { ...options, method: 'put' })
   }
 
-  delete<T>(
+  delete<T = any>(
     url: string,
     data?: RequestData,
     options?: Partial<Pick<HttpConfig, Exclude<keyof HttpConfig, 'method'>>>,
