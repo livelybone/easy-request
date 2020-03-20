@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>EasyRequest</title>
-  <script src="../lib/umd/index.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EasyRequest</title>
+    <script src="../lib/umd/index.js"></script>
 </head>
 <body>
 <div id="module"></div>
@@ -18,6 +18,11 @@ const http = new EasyRequest.Http()
 http.interceptors.response.use(res => {
   console.log(res)
   return res.data
+})
+
+http.post('a', { a: { b: 1 }, v: [{ a: 1 }, { b: 2 }] }, {
+  headers: { 'Content-Type': 'multipart/form-data' },
+  convertFormDataOptions: { indices: false },
 })
 </script>
 </body>

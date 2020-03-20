@@ -39,7 +39,11 @@ function getOptions(config: any, requestTask: any) {
   if (['GET', 'HEAD'].includes(options.method)) {
     options.url = joinUrl(config.baseURL, config.url, config.data)
   } else {
-    options.body = dealRequestData(config.data, config.headers)
+    options.body = dealRequestData(
+      config.data,
+      config.headers,
+      config.convertFormDataOptions,
+    )
   }
   return options
 }

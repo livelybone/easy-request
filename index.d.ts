@@ -1,3 +1,5 @@
+import { objectToFormData } from 'object-to-formdata'
+
 declare type ResponseType =
   | 'text'
   | 'blob'
@@ -35,6 +37,7 @@ interface HttpSharedConfig {
    * Default: { 'content-type': 'application/x-www-form-urlencoded' }
    * */
   headers: HttpHeaders
+  convertFormDataOptions?: Parameters<typeof objectToFormData>[1]
 
   [key: string]: any
 
@@ -79,6 +82,7 @@ interface DownloadFileConfig {
    * 微信小程序配置，支付宝小程序、H5 中设置无效果
    * */
   filePath: string
+  convertFormDataOptions?: HttpSharedConfig['convertFormDataOptions']
 
   [key: string]: any
 }
@@ -112,6 +116,7 @@ interface UploadFileConfig {
    * */
   fileType?: 'image' | 'video' | 'audio'
   extraData: RequestData
+  convertFormDataOptions?: HttpSharedConfig['convertFormDataOptions']
 
   [key: string]: any
 }
@@ -407,6 +412,7 @@ export {
   HttpEngineConfig,
   HttpHeaders,
   HttpInterceptors,
+  HttpSharedConfig,
   ProgressEvent,
   ProgressHandler,
   RequestData,

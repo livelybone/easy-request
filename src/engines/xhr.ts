@@ -88,7 +88,11 @@ function openXhr<T extends any, RT extends any>(
         })
       }
 
-      const data = dealRequestData(config.data, config.headers)
+      const data = dealRequestData(
+        config.data,
+        config.headers,
+        config.convertFormDataOptions,
+      )
       xhr.send(data || null)
     },
   )

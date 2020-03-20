@@ -1,25 +1,7 @@
 import { blobToBase64 } from 'base64-blob'
-import flat from 'flat'
+import { objectToFormData } from 'object-to-formdata'
 import { stringify } from 'qs'
-import { HttpHeaders, RequestData } from './type'
-
-export function flatObj(obj: any) {
-  // const entries: { key: string; value: string | number | null | boolean | undefined | File | Blob | Function }[] = []
-  return flat<
-    any,
-    {
-      [key: string]:
-        | string
-        | number
-        | null
-        | boolean
-        | undefined
-        | File
-        | Blob
-        | Function
-    }
-  >(obj)
-}
+import { HttpHeaders, HttpSharedConfig, RequestData } from './type'
 
 export function joinUrl(
   baseUrl: string,
@@ -31,18 +13,6 @@ export function joinUrl(
     : `${baseUrl}///${url}`.replace(/\/{3,}/g, '/')
   if (!data) return $url
   return `${$url}?&${stringify(data)}`.replace(/\?+&+/, '?')
-}
-
-export function convertToFormData(data: any) {
-  const formData = new FormData()
-  const $data = flatObj(data)
-  Object.keys($data).forEach(k => {
-    const value = $data[k]
-    if (typeof value === 'string' || value instanceof Blob) {
-      formData.append(k, value)
-    }
-  })
-  return formData
 }
 
 export function getBlobUrl(blob: Blob) {
@@ -68,6 +38,7 @@ export function strJsonParse(str?: string | null) {
 export function dealRequestData(
   data: RequestData | null | undefined,
   headers: HttpHeaders,
+  convertFormDataOptions?: HttpSharedConfig['convertFormDataOptions'],
 ) {
   if (!data) return null
 
@@ -78,7 +49,7 @@ export function dealRequestData(
       )!
     ]
   return contentType === 'multipart/form-data'
-    ? convertToFormData(data)
+    ? objectToFormData(data, convertFormDataOptions)
     : contentType === 'application/json'
     ? JSON.stringify(data)
     : stringify(data)

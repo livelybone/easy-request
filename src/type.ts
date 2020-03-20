@@ -1,3 +1,5 @@
+import { objectToFormData } from 'object-to-formdata'
+
 export type ResponseType =
   | 'text'
   | 'blob'
@@ -15,7 +17,7 @@ export interface HttpHeaders {
   [key: string]: string
 }
 
-interface HttpSharedConfig {
+export interface HttpSharedConfig {
   method: string
   /**
    * 对应: responseType、dataType
@@ -37,6 +39,8 @@ interface HttpSharedConfig {
    * Default: { 'content-type': 'application/x-www-form-urlencoded' }
    * */
   headers: HttpHeaders
+
+  convertFormDataOptions?: Parameters<typeof objectToFormData>[1]
 
   [key: string]: any
 
@@ -80,6 +84,8 @@ export interface DownloadFileConfig {
    * */
   filePath: string
 
+  convertFormDataOptions?: HttpSharedConfig['convertFormDataOptions']
+
   [key: string]: any
 }
 
@@ -112,6 +118,8 @@ export interface UploadFileConfig {
    * */
   fileType?: 'image' | 'video' | 'audio'
   extraData: RequestData
+
+  convertFormDataOptions?: HttpSharedConfig['convertFormDataOptions']
 
   [key: string]: any
 }
