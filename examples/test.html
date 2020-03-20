@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EasyRequest</title>
+  <script src="../lib/umd/index.js"></script>
+</head>
+<body>
+<div id="module"></div>
+
+<script>
+var module = document.getElementById('module')
+// do something ...
+
+const http = new EasyRequest.Http()
+
+http.interceptors.response.use(res => {
+  console.log(res)
+  return res.data
+})
+</script>
+</body>
+</html>
