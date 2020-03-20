@@ -164,7 +164,7 @@ interface HttpInterceptors {
       resolves: ResponseInterceptor[]
       rejects: ErrorHandler[]
     }
-    use(resolve: ResponseInterceptor, reject: ErrorHandler): void
+    use(resolve?: ResponseInterceptor, reject?: ErrorHandler): void
   }
 }
 
@@ -179,6 +179,8 @@ declare class BaseEngine<T> {
 }
 
 declare class FetchBase<T> extends BaseEngine<T> {
+  engineName: string
+
   constructor(config: T)
 
   abort(): void
@@ -201,6 +203,8 @@ declare class FetchUpload extends FetchBase<UploadFileConfig>
 }
 
 declare class MYBase<T> extends BaseEngine<T> {
+  engineName: string
+
   constructor(config: T)
 
   abort(): void
@@ -247,6 +251,8 @@ declare class MYUpload extends MYBase<UploadFileConfig>
 }
 
 declare class WXBase<T> extends BaseEngine<T> {
+  engineName: string
+
   constructor(config: T)
 
   abort(): void
@@ -292,6 +298,8 @@ declare class WXUpload extends WXBase<UploadFileConfig>
 }
 
 declare class XhrBase<T> extends BaseEngine<T> {
+  engineName: string
+
   constructor(config: T)
 
   abort(): void

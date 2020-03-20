@@ -49,6 +49,8 @@ function getOptions(config: any, requestTask: any) {
 }
 
 export class FetchBase<T> extends BaseEngine<T> {
+  engineName = 'fetch'
+
   constructor(config: T) {
     super(config)
     if (fetch) this.requestInstance = (...args: any[]) => fetch(...args)

@@ -46,7 +46,7 @@ function openXhr<T extends any, RT extends any>(
             // 200 = OK
             resolve(responseMap(xhr.response) as any)
           } else {
-            reject(new Error('Problem retrieving XML data'))
+            reject(new Error('Network request failed'))
           }
         }
       }
@@ -109,6 +109,8 @@ function dealHeadersStr(headers: string) {
 }
 
 class XhrBase<T> extends BaseEngine<T> {
+  engineName = 'xhr'
+
   constructor(config: T) {
     super(config)
     this.requestInstance = createXhr()

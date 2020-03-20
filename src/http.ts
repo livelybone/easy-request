@@ -56,8 +56,8 @@ export class Http {
     response: {
       interceptors: { resolves: [], rejects: [] },
       use: (resCb, errCb) => {
-        this.interceptors.response.interceptors.resolves.push(resCb)
-        this.interceptors.response.interceptors.rejects.push(errCb)
+        if (resCb) this.interceptors.response.interceptors.resolves.push(resCb)
+        if (errCb) this.interceptors.response.interceptors.rejects.push(errCb)
       },
     },
   }
@@ -132,8 +132,8 @@ export class Http {
       const reject = (e: any) => {
         // @ts-ignore
         e.$request = request
-        return rej(
-          interceptors.rejects.reduce(
+        interceptors.rejects
+          .reduce(
             (pre, cb) =>
               pre.then(result => {
                 if (typeof result === 'object') {
@@ -143,8 +143,9 @@ export class Http {
                 return cb(result as any)
               }),
             Promise.resolve(e),
-          ),
-        )
+          )
+          .then(rej)
+          .catch(rej)
       }
       request
         .open()

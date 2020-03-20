@@ -13,7 +13,12 @@
 var module = document.getElementById('module')
 // do something ...
 
-const http = new EasyRequest.Http()
+const http = new EasyRequest.Http('h5')
+
+http.interceptors.request.use(config => {
+  console.log(config)
+  return config
+})
 
 http.interceptors.response.use(res => {
   console.log(res)
@@ -23,6 +28,8 @@ http.interceptors.response.use(res => {
 http.post('a', { a: { b: 1 }, v: [{ a: 1 }, { b: 2 }] }, {
   headers: { 'Content-Type': 'multipart/form-data' },
   convertFormDataOptions: { indices: false },
+}).catch(e => {
+  console.log(e, e.$request)
 })
 </script>
 </body>

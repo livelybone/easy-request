@@ -18,6 +18,8 @@ import { BaseEngine } from './base'
 declare const wx: any
 
 class WXBase<T> extends BaseEngine<T> {
+  engineName = 'wx'
+
   constructor(config: T) {
     super(config)
     if (wx && wx.request) {

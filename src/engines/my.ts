@@ -17,6 +17,8 @@ import { BaseEngine } from './base'
 declare const my: any
 
 class MYBase<T> extends BaseEngine<T> {
+  engineName = 'my'
+
   constructor(config: T) {
     super(config)
     if (my && (my.request || my.httpRequest)) {

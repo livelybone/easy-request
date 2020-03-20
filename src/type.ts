@@ -169,6 +169,6 @@ export interface HttpInterceptors {
       resolves: ResponseInterceptor[]
       rejects: ErrorHandler[]
     }
-    use(resolve: ResponseInterceptor, reject: ErrorHandler): void
+    use(resolve?: ResponseInterceptor, reject?: ErrorHandler): void
   }
 }
