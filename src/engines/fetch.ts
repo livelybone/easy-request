@@ -87,17 +87,22 @@ export class Fetch<T> extends FetchBase<RequestEngineConfig, RequestResponse<T>>
         headers: response.headers,
         data: null,
       }
-      if (response.ok) {
-        if (this.config.responseType === 'blob')
-          this.response.data = response.blob()
-        else if (this.config.responseType === 'json')
-          this.response.data = response.json()
-        else if (this.config.responseType === 'arraybuffer')
-          this.response.data = response.arrayBuffer()
-        else this.response.data = response.text()
-        return this.response
-      }
-      return Promise.reject(new Error('Network request failed'))
+      const { responseType } = this.config
+      return Promise.resolve(
+        responseType === 'blob'
+          ? response.blob()
+          : responseType === 'json'
+          ? response.json()
+          : responseType === 'arraybuffer'
+          ? response.arrayBuffer()
+          : response.text(),
+      ).then(data => {
+        this.response.data = data
+        if (response.ok) {
+          return this.response
+        }
+        return Promise.reject(this.response)
+      })
     }) as Promise<RequestResponse<T>>
   }
 }
@@ -118,20 +123,20 @@ export class FetchDownload
 
     const { url, ...config } = this.getConfig()
     return this.requestInstance(url, config).then((response: any) => {
-      if (response.ok) {
-        const blob = response.blob()
-        return Promise.resolve(getBlobUrl(blob)).then(tempFilePath => {
-          this.response = {
-            url: response.url || url,
-            blob,
-            tempFilePath,
-            filePath: this.config.filePath,
-            statusCode: response.status,
-          }
+      const blob = response.blob()
+      return Promise.resolve(getBlobUrl(blob)).then(tempFilePath => {
+        this.response = {
+          url: response.url || url,
+          blob,
+          tempFilePath,
+          filePath: this.config.filePath,
+          statusCode: response.status,
+        }
+        if (response.ok) {
           return this.response
-        })
-      }
-      return Promise.reject(new Error('Network request failed'))
+        }
+        return Promise.reject(this.response)
+      })
     }) as Promise<DownloadResponse>
   }
 }
@@ -159,17 +164,22 @@ export class FetchUpload<T>
         statusCode: response.status,
         headers: response.headers,
       }
-      if (response.ok) {
-        if (this.config.responseType === 'blob')
-          this.response.data = response.blob()
-        else if (this.config.responseType === 'json')
-          this.response.data = response.json()
-        else if (this.config.responseType === 'arraybuffer')
-          this.response.data = response.arrayBuffer()
-        else this.response.data = response.text()
-        return this.response
-      }
-      return Promise.reject(new Error('Network request failed'))
+      const { responseType } = this.config
+      return Promise.resolve(
+        responseType === 'blob'
+          ? response.blob()
+          : responseType === 'json'
+          ? response.json()
+          : responseType === 'arraybuffer'
+          ? response.arrayBuffer()
+          : response.text(),
+      ).then(data => {
+        this.response.data = data
+        if (response.ok) {
+          return this.response
+        }
+        return Promise.reject(this.response)
+      })
     }) as Promise<RequestResponse<T>>
   }
 }

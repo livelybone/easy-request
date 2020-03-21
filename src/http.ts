@@ -89,9 +89,9 @@ export class Http {
   }
 
   static createError(e: any) {
-    const err = (/^\[object\s/.test(`${e}`)
-      ? new Error(e.message)
-      : new Error(e)) as Error & { [key in string | number]: any }
+    const message =
+      (/^\[object\s/.test(`${e}`) && e.message) || e || 'Network request failed'
+    const err = new Error(message) as Error & { [key in string | number]: any }
     Object.keys(e).forEach(k => {
       err[k] = e[k]
     })

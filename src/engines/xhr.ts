@@ -46,7 +46,7 @@ function openXhr<T extends any, RT extends any>(
             // 200 = OK
             resolve(responseMap(xhr.response) as any)
           } else {
-            reject(new Error('Network request failed'))
+            reject(responseMap(xhr.response))
           }
         }
       }
