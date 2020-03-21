@@ -82,7 +82,7 @@ export function mergeConfig<T1 extends RequestConfig, T2 extends any>(
   }
 
   config.method = config.method.toUpperCase()
-  if (config.data instanceof FormData) {
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
     delete config.headers['Content-Type']
   }
 
