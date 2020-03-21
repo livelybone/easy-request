@@ -40,9 +40,13 @@ function getOptions(config: any, requestTask: any) {
   if (['GET', 'HEAD'].includes(options.method)) {
     options.url = joinUrl(config.baseURL, config.url, config.data)
   } else {
+    const contentType = config.headers['Content-Type']
+    if (contentType === 'multipart/form-data') {
+      delete config.headers['Content-Type']
+    }
     options.body = dealRequestData(
       config.data,
-      config.headers['Content-Type'],
+      contentType,
       config.convertFormDataOptions,
     )
   }
