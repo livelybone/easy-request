@@ -41,7 +41,7 @@ function getOptions(config: any, requestTask: any) {
     options.url = joinUrl(config.baseURL, config.url, config.data)
   } else {
     const contentType = config.headers['Content-Type']
-    if (contentType === 'multipart/form-data') {
+    if (contentType === 'multipart/form-data' || !config.data) {
       delete config.headers['Content-Type']
     }
     options.body = dealRequestData(

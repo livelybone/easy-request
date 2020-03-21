@@ -85,7 +85,7 @@ function openXhr<T extends any, RT extends any>(
       Object.keys(config.headers).forEach(k => {
         if (
           k !== 'Content-Type' ||
-          config.headers[k] !== 'multipart/form-data'
+          (config.headers[k] !== 'multipart/form-data' && config.data)
         ) {
           xhr.setRequestHeader(k, config.headers[k])
         }
