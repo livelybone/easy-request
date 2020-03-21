@@ -49,8 +49,11 @@ export function dealRequestData(
 
   if (data instanceof FormData) return data
 
+  const { customConvertFn, ...restOptions } = convertFormDataOptions || {}
   return contentType === 'multipart/form-data'
-    ? objectToFormData(data, convertFormDataOptions)
+    ? customConvertFn
+      ? customConvertFn(data)
+      : objectToFormData(data, restOptions)
     : contentType === 'application/json'
     ? JSON.stringify(data)
     : stringify(data)

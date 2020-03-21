@@ -53,7 +53,9 @@ export interface RequestSharedConfig {
    * */
   headers: HttpHeaders
 
-  convertFormDataOptions?: Parameters<typeof objectToFormData>[1]
+  convertFormDataOptions?: Parameters<typeof objectToFormData>[1] & {
+    customConvertFn?(data: RequestData): FormData
+  }
 
   [key: string]: any
 

@@ -52,7 +52,9 @@ interface RequestSharedConfig {
    * Default: { 'Content-Type': 'application/x-www-form-urlencoded' }
    * */
   headers: HttpHeaders
-  convertFormDataOptions?: Parameters<typeof objectToFormData>[1]
+  convertFormDataOptions?: Parameters<typeof objectToFormData>[1] & {
+    customConvertFn?(data: RequestData): FormData
+  }
 
   [key: string]: any
 
