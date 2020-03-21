@@ -30,6 +30,12 @@ interface HttpHeaders {
   [key: string]: string
 }
 
+declare type RequestData =
+  | {
+      [key in string | number]: any
+    }
+  | FormData
+
 interface RequestSharedConfig {
   method: string
   /**
@@ -53,19 +59,13 @@ interface RequestSharedConfig {
    * */
   headers: HttpHeaders
   convertFormDataOptions?: Parameters<typeof objectToFormData>[1] & {
-    customConvertFn?(data: RequestData): FormData
+    customConvertFn?(data: Exclude<RequestData, FormData>): FormData
   }
 
   [key: string]: any
 
   [key: number]: any
 }
-
-declare type RequestData =
-  | {
-      [key in string | number]: any
-    }
-  | FormData
 
 interface RequestEngineConfig extends RequestSharedConfig {
   url: string
@@ -238,11 +238,11 @@ declare class MY<T> extends MYBase<RequestEngineConfig, RequestResponse<T>>
     url: string
     method: string
     data:
-      | FormData
       | {
           [x: string]: any
           [x: number]: any
         }
+      | FormData
       | null
       | undefined
     headers: HttpHeaders
@@ -293,11 +293,11 @@ declare class WX<T> extends WXBase<RequestEngineConfig, RequestResponse<T>>
   getConfig(): {
     url: string
     data:
-      | FormData
       | {
           [x: string]: any
           [x: number]: any
         }
+      | FormData
       | null
       | undefined
     method: string

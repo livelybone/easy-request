@@ -30,6 +30,8 @@ export interface HttpHeaders {
   [key: string]: string
 }
 
+export type RequestData = { [key in string | number]: any } | FormData
+
 export interface RequestSharedConfig {
   method: string
   /**
@@ -54,15 +56,13 @@ export interface RequestSharedConfig {
   headers: HttpHeaders
 
   convertFormDataOptions?: Parameters<typeof objectToFormData>[1] & {
-    customConvertFn?(data: RequestData): FormData
+    customConvertFn?(data: Exclude<RequestData, FormData>): FormData
   }
 
   [key: string]: any
 
   [key: number]: any
 }
-
-export type RequestData = { [key in string | number]: any } | FormData
 
 export interface RequestEngineConfig extends RequestSharedConfig {
   url: string
