@@ -2,11 +2,13 @@
  * XMLHttpRequest api
  * */
 import {
-  DownloadFileConfig,
-  EngineResult,
-  HttpEngineConfig,
-  ProgressHandler,
-  UploadFileConfig,
+  DownloadEngineConfig,
+  DownloadResponse,
+  EngineName,
+  RequestEngine,
+  RequestEngineConfig,
+  RequestResponse,
+  UploadEngineConfig,
 } from '../type'
 import { dealRequestData, getBlobUrl, joinUrl } from '../utils'
 import { BaseEngine } from './base'
@@ -28,14 +30,12 @@ function createXhr() {
 
 function openXhr<T extends any, RT extends any>(
   xhr: any,
-  config: HttpEngineConfig & {
-    onUploadProgress?: ProgressHandler
-    onDownloadProgress?: ProgressHandler
-  },
+  config: RequestEngineConfig,
   responseMap: (res: T) => RT,
 ) {
-  if (!xhr)
+  if (!xhr) {
     return Promise.reject(new Error('The environment does not support XHR'))
+  }
 
   return new Promise<RT extends Promise<infer E> ? E : RT>(
     (resolve, reject) => {
@@ -82,18 +82,24 @@ function openXhr<T extends any, RT extends any>(
           : joinUrl('', config.url, config.data)
       xhr.open(config.method, url, true)
 
-      if (config.headers) {
-        Object.keys(config.headers).forEach(k => {
-          xhr.setRequestHeader(k, config.headers![k])
-        })
-      }
+      Object.keys(config.headers).forEach(k => {
+        if (
+          k !== 'Content-Type' ||
+          config.headers[k] !== 'multipart/form-data'
+        ) {
+          xhr.setRequestHeader(k, config.headers[k])
+        }
+      })
 
-      const data = dealRequestData(
-        config.data,
-        config.headers,
-        config.convertFormDataOptions,
-      )
-      xhr.send(data || null)
+      const data =
+        config.method !== 'GET'
+          ? dealRequestData(
+              config.data,
+              config.headers['Content-Type'],
+              config.convertFormDataOptions,
+            )
+          : null
+      xhr.send(data)
     },
   )
 }
@@ -108,10 +114,10 @@ function dealHeadersStr(headers: string) {
     }, {} as { [key: string]: string })
 }
 
-class XhrBase<T> extends BaseEngine<T> {
-  engineName = 'xhr'
+class XhrBase<Config, Response> extends BaseEngine<Config, Response> {
+  name = EngineName.XHR
 
-  constructor(config: T) {
+  constructor(config: Config) {
     super(config)
     this.requestInstance = createXhr()
     this.requestTask = this.requestInstance
@@ -122,24 +128,50 @@ class XhrBase<T> extends BaseEngine<T> {
   }
 }
 
-export class Xhr extends XhrBase<HttpEngineConfig> implements HttpEngine {
-  open<T = any>() {
+export class Xhr<T> extends XhrBase<RequestEngineConfig, RequestResponse<T>>
+  implements RequestEngine<RequestEngineConfig, RequestResponse<T>> {
+  open() {
     return openXhr(
       this.requestInstance,
       this.config,
       (res: T) =>
         ({
+          url: this.config.url,
           data: res,
           statusCode: this.requestInstance.status,
           headers: dealHeadersStr(this.requestInstance.getAllResponseHeaders()),
-        } as EngineResult<T>),
+        } as RequestResponse<T>),
     )
   }
 }
 
-export class XhrUpload extends XhrBase<UploadFileConfig>
-  implements UploadEngine {
-  open<T = any>(onUploadProgress?: ProgressHandler) {
+export class XhrDownload extends XhrBase<DownloadEngineConfig, DownloadResponse>
+  implements RequestEngine<DownloadEngineConfig, DownloadResponse> {
+  open() {
+    return openXhr(
+      this.requestInstance,
+      {
+        ...this.config,
+        method: 'GET',
+        responseType: 'blob',
+        withCredentials: true,
+      },
+      (res: Blob) =>
+        Promise.resolve(getBlobUrl(res)).then(tempFilePath => ({
+          url: this.config.url,
+          tempFilePath,
+          filePath: this.config.filePath,
+          statusCode: this.requestInstance.status,
+          blob: res,
+        })) as Promise<DownloadResponse>,
+    )
+  }
+}
+
+export class XhrUpload<T>
+  extends XhrBase<UploadEngineConfig, RequestResponse<T>>
+  implements RequestEngine<UploadEngineConfig, RequestResponse<T>> {
+  open() {
     return openXhr(
       this.requestInstance,
       {
@@ -148,43 +180,21 @@ export class XhrUpload extends XhrBase<UploadFileConfig>
           ...this.config.extraData,
           [this.config.fileKey]: this.config.file,
         },
-        method: 'GET',
+        method: 'POST',
         responseType: 'json',
         withCredentials: true,
         headers: {
           ...this.config.headers,
-          'content-type': 'multipart/form-data',
+          'Content-Type': 'multipart/form-data',
         },
-        onUploadProgress,
       },
       (res: T) =>
         ({
+          url: this.config.url,
           data: res,
-          statusCode: this.requestInstance.status,
+          statusCode: this.requestInstance.status || 200,
           headers: dealHeadersStr(this.requestInstance.getAllResponseHeaders()),
-        } as EngineResult<T>),
-    )
-  }
-}
-
-export class XhrDownload extends XhrBase<DownloadFileConfig>
-  implements DownloadEngine {
-  open(onDownloadProgress?: ProgressHandler) {
-    return openXhr(
-      this.requestInstance,
-      {
-        ...this.config,
-        method: 'POST',
-        responseType: 'blob',
-        withCredentials: true,
-        onDownloadProgress,
-      },
-      (res: any) =>
-        Promise.resolve(getBlobUrl(res)).then(tempFilePath => ({
-          tempFilePath,
-          filePath: this.config.filePath,
-          statusCode: this.requestInstance.status,
-        })),
+        } as RequestResponse<T>),
     )
   }
 }

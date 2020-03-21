@@ -13,7 +13,9 @@
 var module = document.getElementById('module')
 // do something ...
 
-const http = new EasyRequest.Http('h5')
+const { Http, EngineName } = EasyRequest
+
+const http = new Http(EngineName.XHR)
 
 http.interceptors.request.use(config => {
   console.log(config)
@@ -25,8 +27,19 @@ http.interceptors.response.use(res => {
   return res.data
 })
 
+const data = new FormData()
+data.append('a', '1')
+data.append('b', '1')
+data.append('b', '2')
+
 http.post('a', { a: { b: 1 }, v: [{ a: 1 }, { b: 2 }] }, {
-  headers: { 'Content-Type': 'multipart/form-data' },
+  headers: { 'content-type': 'application/json' },
+  convertFormDataOptions: { indices: false },
+}).catch(e => {
+  console.log(e, e.$request)
+})
+http.post('b', data, {
+  headers: { 'content-type': 'multipart/form-data' },
   convertFormDataOptions: { indices: false },
 }).catch(e => {
   console.log(e, e.$request)

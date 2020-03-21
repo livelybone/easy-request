@@ -9,15 +9,28 @@ export type ResponseType =
   | 'JSON'
   | 'base64'
 
-export type Env = 'weapp' | 'aliapp' | 'h5' | 'fetch'
+export enum EngineName {
+  /** 微信小程序 api */
+  WX = 'wx',
+  /** 支付宝小程序 api */
+  MY = 'my',
+  /** xhr api */
+  XHR = 'xhr',
+  /** fetch api */
+  Fetch = 'fetch',
+}
 
-export type ProgressHandler = (e: ProgressEvent) => void
+export interface ProgressEv {
+  total: number
+  transmitted: number
+  progress: number
+}
 
 export interface HttpHeaders {
   [key: string]: string
 }
 
-export interface HttpSharedConfig {
+export interface RequestSharedConfig {
   method: string
   /**
    * 对应: responseType、dataType
@@ -36,7 +49,7 @@ export interface HttpSharedConfig {
    * */
   timeout: number
   /**
-   * Default: { 'content-type': 'application/x-www-form-urlencoded' }
+   * Default: { 'Content-Type': 'application/x-www-form-urlencoded' }
    * */
   headers: HttpHeaders
 
@@ -47,24 +60,25 @@ export interface HttpSharedConfig {
   [key: number]: any
 }
 
-export type RequestData = { [key in string | number]: any }
+export type RequestData = { [key in string | number]: any } | FormData
 
-export interface HttpEngineConfig extends HttpSharedConfig {
+export interface RequestEngineConfig extends RequestSharedConfig {
   url: string
   data?: RequestData | null
+
+  /** do not work in engine: wx, my, fetch */
+  onUploadProgress?(ev: ProgressEv): void
+  /** do not work in engine: wx, my, fetch */
+  onDownloadProgress?(ev: ProgressEv): void
 }
 
-export interface HttpConfig extends HttpSharedConfig {
+export interface RequestConfig extends RequestSharedConfig {
   baseURL: string
 }
 
-export interface ProgressEvent {
-  total: number
-  transmitted: number
-  progress: number
-}
-
-export interface EngineResult<T = any> {
+export interface RequestResponse<T = any> {
+  /** api url */
+  url: string
   data: T
   statusCode: number
   headers: HttpHeaders
@@ -72,34 +86,39 @@ export interface EngineResult<T = any> {
   [key: string]: any
 }
 
-export interface DownloadFileConfig {
+export interface DownloadEngineConfig {
   url: string
   headers: HttpHeaders
   /**
    * 微信小程序配置，支付宝小程序、H5 中设置无效果
    * */
-  timeout: HttpSharedConfig['timeout']
+  timeout: RequestSharedConfig['timeout']
   /**
    * 微信小程序配置，支付宝小程序、H5 中设置无效果
    * */
   filePath: string
 
-  convertFormDataOptions?: HttpSharedConfig['convertFormDataOptions']
+  convertFormDataOptions?: RequestSharedConfig['convertFormDataOptions']
+
+  onDownloadProgress?(ev: ProgressEv): void
 
   [key: string]: any
 }
 
-export interface DownloadResult {
+export interface DownloadResponse {
+  /** api url */
+  url: string
   tempFilePath: string
   filePath: string
   statusCode: number
+  blob?: Blob
 
   [key: string]: any
 }
 
-export interface UploadFileConfig {
+export interface UploadEngineConfig {
   url: string
-  timeout: HttpSharedConfig['timeout']
+  timeout: RequestSharedConfig['timeout']
   headers: HttpHeaders
   /**
    * 对应微信、支付宝小程序中的 filePath
@@ -119,45 +138,33 @@ export interface UploadFileConfig {
   fileType?: 'image' | 'video' | 'audio'
   extraData: RequestData
 
-  convertFormDataOptions?: HttpSharedConfig['convertFormDataOptions']
+  convertFormDataOptions?: RequestSharedConfig['convertFormDataOptions']
+
+  onUploadProgress?(ev: ProgressEv): void
 
   [key: string]: any
 }
 
-declare global {
-  // @ts-ignore
-  class HttpEngine {
-    constructor(config: HttpEngineConfig)
+export interface RequestEngine<Config = RequestEngineConfig, Response = any> {
+  name: EngineName
+  config: Config
+  response: Response | RequestResponse<null>
+  requestInstance: any
+  requestTask: any
 
-    open<T = any>(): Promise<EngineResult<T>>
+  open(): Promise<Response>
 
-    abort(): void
-  }
-
-  // @ts-ignore
-  class DownloadEngine {
-    constructor(config: DownloadFileConfig)
-
-    open(onDownloadProgress?: ProgressHandler): Promise<DownloadResult>
-
-    abort(): void
-  }
-
-  // @ts-ignore
-  class UploadEngine {
-    constructor(config: UploadFileConfig)
-
-    open<T>(onUploadProgress?: ProgressHandler): Promise<EngineResult<T>>
-
-    abort(): void
-  }
+  abort(): void
 }
 
 export type ConfigInterceptor = (config: any) => any
 export type ResponseInterceptor = (response: any) => any
-export type ErrorHandler = (
-  e: Error & { $request: HttpEngine | DownloadEngine | UploadEngine },
-) => any
+export type RequestError = Error & {
+  $request: RequestEngine
+  [key: string]: any
+  [key: number]: any
+}
+export type ErrorHandler = (e: RequestError) => any
 
 export interface HttpInterceptors {
   request: {

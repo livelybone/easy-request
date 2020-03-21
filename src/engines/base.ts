@@ -1,11 +1,20 @@
-export class BaseEngine<T> {
-  config: T
+import { RequestResponse } from '../type'
+
+export class BaseEngine<Config, Response> {
+  config: Config
 
   requestInstance: any
 
   requestTask: any
 
-  constructor(config: T) {
+  response: Response | RequestResponse<null> = {
+    url: '',
+    data: null,
+    statusCode: 0,
+    headers: {},
+  }
+
+  constructor(config: Config) {
     this.config = config
   }
 }

@@ -1,7 +1,12 @@
 import { blobToBase64 } from 'base64-blob'
 import { objectToFormData } from 'object-to-formdata'
 import { stringify } from 'qs'
-import { HttpHeaders, HttpSharedConfig, RequestData } from './type'
+import {
+  HttpHeaders,
+  RequestConfig,
+  RequestData,
+  RequestSharedConfig,
+} from './type'
 
 export function joinUrl(
   baseUrl: string,
@@ -37,20 +42,49 @@ export function strJsonParse(str?: string | null) {
 
 export function dealRequestData(
   data: RequestData | null | undefined,
-  headers: HttpHeaders,
-  convertFormDataOptions?: HttpSharedConfig['convertFormDataOptions'],
+  contentType?: string,
+  convertFormDataOptions?: RequestSharedConfig['convertFormDataOptions'],
 ) {
   if (!data) return null
 
-  const contentType =
-    headers[
-      Object.keys(headers).find(
-        k => k.toLowerCase().replace(/-+/g, '') === 'contenttype',
-      )!
-    ]
+  if (data instanceof FormData) return data
+
   return contentType === 'multipart/form-data'
     ? objectToFormData(data, convertFormDataOptions)
     : contentType === 'application/json'
     ? JSON.stringify(data)
     : stringify(data)
+}
+
+export function mergeHeaders(
+  tHeaders: HttpHeaders,
+  headers?: HttpHeaders,
+): HttpHeaders {
+  const $headers = headers || tHeaders
+  return Object.keys($headers).reduce(
+    (pre, k) => {
+      if (k.toLowerCase() !== 'content-type') pre[k] = $headers[k]
+      else pre['Content-Type'] = $headers[k]
+      return pre
+    },
+    headers ? mergeHeaders(tHeaders) : {},
+  )
+}
+
+export function mergeConfig<T1 extends RequestConfig, T2 extends any>(
+  conf1: T1,
+  conf2?: T2,
+): any {
+  const config = {
+    ...conf1,
+    ...conf2,
+    headers: mergeHeaders(conf1.headers, conf2 && conf2.headers),
+  }
+
+  config.method = config.method.toUpperCase()
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type']
+  }
+
+  return config
 }

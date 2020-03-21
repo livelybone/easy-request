@@ -46,11 +46,10 @@ npm i -S @livelybone/easy-request
 
 ## Usage
 ```js
-import { Http } from '@livelybone/easy-request'
+import { Http, EngineName } from '@livelybone/easy-request'
 
-const env = 'weapp' // options: h5 | weapp | aliapp | fetch
 const http = new Http(
-  env,
+  EngineName.XHR,
   {
     baseURL: 'https://api.hostname.com',
     responseType: 'json',
@@ -73,15 +72,18 @@ http.interceptors.response.use(response => {
 })
 
 const data = { param: '1' }
+
 http.get('/api1').then(res => {
   // ... do something
 })
+
 http.get('/api2', data, { responseType: 'text' }).then(res => {
   // ... do something
 })
+
 http.post('/api2', data, {
   responseType: 'text',
-   headers: { 'Content-Type': 'multipart/form-data' },
+  headers: { 'Content-Type': 'multipart/form-data' },
 }).then(res => {
   // ... do something
 })

@@ -8,14 +8,29 @@ declare type ResponseType =
   | 'arraybuffer'
   | 'JSON'
   | 'base64'
-declare type Env = 'weapp' | 'aliapp' | 'h5' | 'fetch'
-declare type ProgressHandler = (e: ProgressEvent) => void
+
+declare enum EngineName {
+  /** 微信小程序 api */
+  WX = 'wx',
+  /** 支付宝小程序 api */
+  MY = 'my',
+  /** xhr api */
+  XHR = 'xhr',
+  /** fetch api */
+  Fetch = 'fetch',
+}
+
+interface ProgressEv {
+  total: number
+  transmitted: number
+  progress: number
+}
 
 interface HttpHeaders {
   [key: string]: string
 }
 
-interface HttpSharedConfig {
+interface RequestSharedConfig {
   method: string
   /**
    * 对应: responseType、dataType
@@ -34,7 +49,7 @@ interface HttpSharedConfig {
    * */
   timeout: number
   /**
-   * Default: { 'content-type': 'application/x-www-form-urlencoded' }
+   * Default: { 'Content-Type': 'application/x-www-form-urlencoded' }
    * */
   headers: HttpHeaders
   convertFormDataOptions?: Parameters<typeof objectToFormData>[1]
@@ -44,26 +59,30 @@ interface HttpSharedConfig {
   [key: number]: any
 }
 
-declare type RequestData = {
-  [key in string | number]: any
-}
+declare type RequestData =
+  | {
+      [key in string | number]: any
+    }
+  | FormData
 
-interface HttpEngineConfig extends HttpSharedConfig {
+interface RequestEngineConfig extends RequestSharedConfig {
   url: string
   data?: RequestData | null
+
+  /** do not work in engine: wx, my, fetch */
+  onUploadProgress?(ev: ProgressEv): void
+
+  /** do not work in engine: wx, my, fetch */
+  onDownloadProgress?(ev: ProgressEv): void
 }
 
-interface HttpConfig extends HttpSharedConfig {
+interface RequestConfig extends RequestSharedConfig {
   baseURL: string
 }
 
-interface ProgressEvent {
-  total: number
-  transmitted: number
-  progress: number
-}
-
-interface EngineResult<T = any> {
+interface RequestResponse<T = any> {
+  /** api url */
+  url: string
   data: T
   statusCode: number
   headers: HttpHeaders
@@ -71,33 +90,38 @@ interface EngineResult<T = any> {
   [key: string]: any
 }
 
-interface DownloadFileConfig {
+interface DownloadEngineConfig {
   url: string
   headers: HttpHeaders
   /**
    * 微信小程序配置，支付宝小程序、H5 中设置无效果
    * */
-  timeout: HttpSharedConfig['timeout']
+  timeout: RequestSharedConfig['timeout']
   /**
    * 微信小程序配置，支付宝小程序、H5 中设置无效果
    * */
   filePath: string
-  convertFormDataOptions?: HttpSharedConfig['convertFormDataOptions']
+  convertFormDataOptions?: RequestSharedConfig['convertFormDataOptions']
+
+  onDownloadProgress?(ev: ProgressEv): void
 
   [key: string]: any
 }
 
-interface DownloadResult {
+interface DownloadResponse {
+  /** api url */
+  url: string
   tempFilePath: string
   filePath: string
   statusCode: number
+  blob?: Blob
 
   [key: string]: any
 }
 
-interface UploadFileConfig {
+interface UploadEngineConfig {
   url: string
-  timeout: HttpSharedConfig['timeout']
+  timeout: RequestSharedConfig['timeout']
   headers: HttpHeaders
   /**
    * 对应微信、支付宝小程序中的 filePath
@@ -116,43 +140,33 @@ interface UploadFileConfig {
    * */
   fileType?: 'image' | 'video' | 'audio'
   extraData: RequestData
-  convertFormDataOptions?: HttpSharedConfig['convertFormDataOptions']
+  convertFormDataOptions?: RequestSharedConfig['convertFormDataOptions']
+
+  onUploadProgress?(ev: ProgressEv): void
 
   [key: string]: any
 }
 
-declare global {
-  class HttpEngine {
-    constructor(config: HttpEngineConfig)
+interface RequestEngine<Config = RequestEngineConfig, Response = any> {
+  name: EngineName
+  config: Config
+  response: Response | RequestResponse<null>
+  requestInstance: any
+  requestTask: any
 
-    open<T = any>(): Promise<EngineResult<T>>
+  open(): Promise<Response>
 
-    abort(): void
-  }
-
-  class DownloadEngine {
-    constructor(config: DownloadFileConfig)
-
-    open(onDownloadProgress?: ProgressHandler): Promise<DownloadResult>
-
-    abort(): void
-  }
-
-  class UploadEngine {
-    constructor(config: UploadFileConfig)
-
-    open<T>(onUploadProgress?: ProgressHandler): Promise<EngineResult<T>>
-
-    abort(): void
-  }
+  abort(): void
 }
+
 declare type ConfigInterceptor = (config: any) => any
 declare type ResponseInterceptor = (response: any) => any
-declare type ErrorHandler = (
-  e: Error & {
-    $request: HttpEngine | DownloadEngine | UploadEngine
-  },
-) => any
+declare type RequestError = Error & {
+  $request: RequestEngine
+  [key: string]: any
+  [key: number]: any
+}
+declare type ErrorHandler = (e: RequestError) => any
 
 interface HttpInterceptors {
   request: {
@@ -168,75 +182,89 @@ interface HttpInterceptors {
   }
 }
 
-declare class BaseEngine<T> {
-  config: T
+declare class BaseEngine<Config, Response> {
+  config: Config
 
   requestInstance: any
 
   requestTask: any
 
-  constructor(config: T)
+  response: Response | RequestResponse<null>
+
+  constructor(config: Config)
 }
 
-declare class FetchBase<T> extends BaseEngine<T> {
-  engineName: string
+declare class FetchBase<Config, Response> extends BaseEngine<Config, Response> {
+  name: EngineName
 
-  constructor(config: T)
+  constructor(config: Config)
 
   abort(): void
 
   getConfig(): any
 }
 
-declare class Fetch extends FetchBase<HttpEngineConfig> implements HttpEngine {
-  open<T = any>(): Promise<EngineResult<T>>
+declare class Fetch<T>
+  extends FetchBase<RequestEngineConfig, RequestResponse<T>>
+  implements RequestEngine<RequestEngineConfig, RequestResponse<T>> {
+  open(): Promise<RequestResponse<T>>
 }
 
-declare class FetchDownload extends FetchBase<DownloadFileConfig>
-  implements DownloadEngine {
-  open(onDownloadProgress?: ProgressHandler): Promise<DownloadResult>
+declare class FetchDownload
+  extends FetchBase<DownloadEngineConfig, DownloadResponse>
+  implements RequestEngine<DownloadEngineConfig, DownloadResponse> {
+  open(): Promise<DownloadResponse>
 }
 
-declare class FetchUpload extends FetchBase<UploadFileConfig>
-  implements UploadEngine {
-  open<T = any>(onUploadProgress?: ProgressHandler): Promise<EngineResult<T>>
+declare class FetchUpload<T>
+  extends FetchBase<UploadEngineConfig, RequestResponse<T>>
+  implements RequestEngine<UploadEngineConfig, RequestResponse<T>> {
+  open<T = any>(): Promise<RequestResponse<T>>
 }
 
-declare class MYBase<T> extends BaseEngine<T> {
-  engineName: string
+declare class MYBase<Config, Response> extends BaseEngine<Config, Response> {
+  name: EngineName
 
-  constructor(config: T)
+  constructor(config: Config)
 
   abort(): void
 }
 
-declare class MY extends MYBase<HttpEngineConfig> implements HttpEngine {
+declare class MY<T> extends MYBase<RequestEngineConfig, RequestResponse<T>>
+  implements RequestEngine<RequestEngineConfig, RequestResponse<T>> {
   getConfig(): {
     url: string
     method: string
-    data: RequestData | null | undefined
+    data:
+      | FormData
+      | {
+          [x: string]: any
+          [x: number]: any
+        }
+      | null
+      | undefined
     headers: HttpHeaders
     header: HttpHeaders
     timeout: number
     dataType: ResponseType
   }
 
-  open<T = any>(): Promise<EngineResult<T>>
+  open(): Promise<RequestResponse<T>>
 }
 
-declare class MYDownload extends MYBase<DownloadFileConfig>
-  implements DownloadEngine {
+declare class MYDownload extends MYBase<DownloadEngineConfig, DownloadResponse>
+  implements RequestEngine<DownloadEngineConfig, DownloadResponse> {
   getConfig(): {
     url: string
     header: HttpHeaders
     headers: HttpHeaders
   }
 
-  open(onDownloadProgress?: ProgressHandler): Promise<DownloadResult>
+  open(): Promise<DownloadResponse>
 }
 
-declare class MYUpload extends MYBase<UploadFileConfig>
-  implements UploadEngine {
+declare class MYUpload<T> extends MYBase<UploadEngineConfig, RequestResponse<T>>
+  implements RequestEngine<UploadEngineConfig, RequestResponse<T>> {
   getConfig(): {
     url: string
     filePath: string | Blob | File
@@ -247,21 +275,29 @@ declare class MYUpload extends MYBase<UploadFileConfig>
     formData: RequestData
   }
 
-  open<T = any>(onUploadProgress?: ProgressHandler): Promise<EngineResult<T>>
+  open(): Promise<RequestResponse<T>>
 }
 
-declare class WXBase<T> extends BaseEngine<T> {
-  engineName: string
+declare class WXBase<Config, Response> extends BaseEngine<Config, Response> {
+  name: EngineName
 
-  constructor(config: T)
+  constructor(config: Config)
 
   abort(): void
 }
 
-declare class WX extends WXBase<HttpEngineConfig> implements HttpEngine {
+declare class WX<T> extends WXBase<RequestEngineConfig, RequestResponse<T>>
+  implements RequestEngine<RequestEngineConfig, RequestResponse<T>> {
   getConfig(): {
     url: string
-    data: RequestData | null | undefined
+    data:
+      | FormData
+      | {
+          [x: string]: any
+          [x: number]: any
+        }
+      | null
+      | undefined
     method: string
     dataType: ResponseType
     timeout: number
@@ -269,11 +305,11 @@ declare class WX extends WXBase<HttpEngineConfig> implements HttpEngine {
     headers: HttpHeaders
   }
 
-  open<T = any>(): Promise<EngineResult<T>>
+  open(): Promise<RequestResponse<T>>
 }
 
-declare class WXDownload extends WXBase<DownloadFileConfig>
-  implements DownloadEngine {
+declare class WXDownload extends WXBase<DownloadEngineConfig, DownloadResponse>
+  implements RequestEngine<DownloadEngineConfig, DownloadResponse> {
   getConfig(): {
     url: string
     timeout: number
@@ -282,11 +318,11 @@ declare class WXDownload extends WXBase<DownloadFileConfig>
     filePath: string
   }
 
-  open(onDownloadProgress?: ProgressHandler): Promise<DownloadResult>
+  open(): Promise<DownloadResponse>
 }
 
-declare class WXUpload extends WXBase<UploadFileConfig>
-  implements UploadEngine {
+declare class WXUpload<T> extends WXBase<UploadEngineConfig, RequestResponse<T>>
+  implements RequestEngine<UploadEngineConfig, RequestResponse<T>> {
   getConfig(): {
     url: string
     timeout: number
@@ -294,90 +330,94 @@ declare class WXUpload extends WXBase<UploadFileConfig>
     headers: HttpHeaders
   }
 
-  open<T = any>(onUploadProgress?: ProgressHandler): Promise<EngineResult<T>>
+  open(): Promise<RequestResponse<T>>
 }
 
-declare class XhrBase<T> extends BaseEngine<T> {
-  engineName: string
+declare class XhrBase<Config, Response> extends BaseEngine<Config, Response> {
+  name: EngineName
 
-  constructor(config: T)
+  constructor(config: Config)
 
   abort(): void
 }
 
-declare class Xhr extends XhrBase<HttpEngineConfig> implements HttpEngine {
-  open<T = any>(): Promise<EngineResult<T>>
+declare class Xhr<T> extends XhrBase<RequestEngineConfig, RequestResponse<T>>
+  implements RequestEngine<RequestEngineConfig, RequestResponse<T>> {
+  open(): Promise<RequestResponse<T>>
 }
 
-declare class XhrUpload extends XhrBase<UploadFileConfig>
-  implements UploadEngine {
-  open<T = any>(onUploadProgress?: ProgressHandler): Promise<EngineResult<T>>
+declare class XhrDownload
+  extends XhrBase<DownloadEngineConfig, DownloadResponse>
+  implements RequestEngine<DownloadEngineConfig, DownloadResponse> {
+  open(): Promise<DownloadResponse>
 }
 
-declare class XhrDownload extends XhrBase<DownloadFileConfig>
-  implements DownloadEngine {
-  open(
-    onDownloadProgress?: ProgressHandler,
-  ): Promise<{
-    tempFilePath: string
-    filePath: string
-    statusCode: any
-  }>
+declare class XhrUpload<T>
+  extends XhrBase<UploadEngineConfig, RequestResponse<T>>
+  implements RequestEngine<UploadEngineConfig, RequestResponse<T>> {
+  open(): Promise<RequestResponse<T>>
 }
 
 declare class Http {
-  env: Env
+  engineName: EngineName
 
-  config: HttpConfig
+  config: RequestConfig
 
   interceptors: HttpInterceptors
 
-  constructor(env?: Env, config?: Partial<HttpConfig>)
+  constructor(engineName?: EngineName, config?: Partial<RequestConfig>)
 
   calcConfig(config?: any): any
 
-  getRequestInstance(config: HttpEngineConfig): Fetch | MY | WX | Xhr
+  getRequestInstance<T = any>(
+    config: RequestEngineConfig,
+  ): WX<T> | MY<T> | Fetch<T> | Xhr<T>
 
   getDownloadInstance(
-    config: DownloadFileConfig,
+    config: DownloadEngineConfig,
   ): FetchDownload | MYDownload | WXDownload | XhrDownload
 
-  getUploadInstance(
-    config: UploadFileConfig,
-  ): FetchUpload | MYUpload | WXUpload | XhrUpload
+  getUploadInstance<T = any>(
+    config: UploadEngineConfig,
+  ): WXUpload<T> | MYUpload<T> | FetchUpload<T> | XhrUpload<T>
+
+  static createError(
+    e: any,
+  ): Error & {
+    [x: string]: any
+    [x: number]: any
+  }
 
   request<T = any>(
     url: string,
     data?: RequestData,
-    options?: Partial<HttpConfig>,
+    options?: Partial<RequestConfig>,
   ): Promise<T>
 
   /**
    * 对应微信/支付宝小程序的 downloadFile
    * */
   downloadFile(
-    options: Partial<DownloadFileConfig> &
-      Pick<DownloadFileConfig, 'url'> & {
-        onDownloadProgress?: ProgressHandler
-      },
+    options: Partial<DownloadEngineConfig> & Pick<DownloadEngineConfig, 'url'>,
   ): Promise<{
     $request: FetchDownload | MYDownload | WXDownload | XhrDownload
+    url: string
     tempFilePath: string
     filePath: string
-    statusCode: any
+    statusCode: number
+    blob?: Blob | undefined
   }>
 
   /**
    * 对应微信/支付宝小程序的 uploadFile
    * */
-  uploadFile(
-    options: Partial<UploadFileConfig> &
-      Pick<UploadFileConfig, 'url' | 'file' | 'fileKey'> & {
-        onUploadProgress?: ProgressHandler
-      },
+  uploadFile<T = any>(
+    options: Partial<UploadEngineConfig> &
+      Pick<UploadEngineConfig, 'url' | 'file' | 'fileKey'>,
   ): Promise<{
-    $request: FetchUpload | MYUpload | WXUpload | XhrUpload
-    data: any
+    $request: WXUpload<any> | MYUpload<any> | FetchUpload<any> | XhrUpload<any>
+    url: string
+    data: T
     statusCode: number
     headers: HttpHeaders
   }>
@@ -385,46 +425,55 @@ declare class Http {
   get<T = any>(
     url: string,
     data?: RequestData,
-    options?: Partial<Pick<HttpConfig, Exclude<keyof HttpConfig, 'method'>>>,
+    options?: Partial<
+      Pick<RequestConfig, Exclude<keyof RequestConfig, 'method'>>
+    >,
   ): Promise<T>
 
   post<T = any>(
     url: string,
     data?: RequestData,
-    options?: Partial<Pick<HttpConfig, Exclude<keyof HttpConfig, 'method'>>>,
+    options?: Partial<
+      Pick<RequestConfig, Exclude<keyof RequestConfig, 'method'>>
+    >,
   ): Promise<T>
 
   put<T = any>(
     url: string,
     data?: RequestData,
-    options?: Partial<Pick<HttpConfig, Exclude<keyof HttpConfig, 'method'>>>,
+    options?: Partial<
+      Pick<RequestConfig, Exclude<keyof RequestConfig, 'method'>>
+    >,
   ): Promise<T>
 
   delete<T = any>(
     url: string,
     data?: RequestData,
-    options?: Partial<Pick<HttpConfig, Exclude<keyof HttpConfig, 'method'>>>,
+    options?: Partial<
+      Pick<RequestConfig, Exclude<keyof RequestConfig, 'method'>>
+    >,
   ): Promise<T>
 }
 
 export default Http
 export {
   ConfigInterceptor,
-  DownloadFileConfig,
-  DownloadResult,
-  EngineResult,
-  Env,
+  DownloadEngineConfig,
+  DownloadResponse,
+  EngineName,
   ErrorHandler,
   Http,
-  HttpConfig,
-  HttpEngineConfig,
   HttpHeaders,
   HttpInterceptors,
-  HttpSharedConfig,
-  ProgressEvent,
-  ProgressHandler,
+  ProgressEv,
+  RequestConfig,
   RequestData,
+  RequestEngine,
+  RequestEngineConfig,
+  RequestError,
+  RequestResponse,
+  RequestSharedConfig,
   ResponseInterceptor,
   ResponseType,
-  UploadFileConfig,
+  UploadEngineConfig,
 }

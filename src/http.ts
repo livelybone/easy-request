@@ -3,46 +3,28 @@ import { MY, MYDownload, MYUpload } from './engines/my'
 import { WX, WXDownload, WXUpload } from './engines/wx'
 import { Xhr, XhrDownload, XhrUpload } from './engines/xhr'
 import {
-  DownloadFileConfig,
-  Env,
-  HttpConfig,
-  HttpEngineConfig,
+  DownloadEngineConfig,
+  EngineName,
   HttpInterceptors,
-  ProgressHandler,
+  RequestConfig,
   RequestData,
-  UploadFileConfig,
+  RequestEngineConfig,
+  RequestResponse,
+  UploadEngineConfig,
 } from './type'
-import { joinUrl } from './utils'
-
-function mergeConfig<T1 extends HttpConfig, T2 extends any>(
-  conf1: T1,
-  conf2?: T2,
-): any {
-  const config = !conf2
-    ? conf1
-    : {
-        ...conf1,
-        ...conf2,
-        headers: {
-          ...conf1.headers,
-          ...conf2.headers,
-        },
-      }
-  config.method = config.method.toUpperCase()
-  return config
-}
+import { joinUrl, mergeConfig } from './utils'
 
 export class Http {
-  env: Env = 'h5'
+  engineName = EngineName.XHR
 
-  config: HttpConfig = {
+  config: RequestConfig = {
     baseURL: '',
     method: 'GET',
     timeout: 30000,
     responseType: 'json',
     withCredentials: false,
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
+      'content-type': 'application/x-www-form-urlencoded',
     },
   }
 
@@ -62,8 +44,8 @@ export class Http {
     },
   }
 
-  constructor(env: Env = 'h5', config?: Partial<HttpConfig>) {
-    this.env = env
+  constructor(engineName = EngineName.XHR, config?: Partial<RequestConfig>) {
+    this.engineName = engineName
     this.config = mergeConfig(this.config, config)
   }
 
@@ -76,40 +58,50 @@ export class Http {
     })
   }
 
-  getRequestInstance(config: HttpEngineConfig) {
-    return this.env === 'weapp'
-      ? new WX(config)
-      : this.env === 'aliapp'
-      ? new MY(config)
-      : this.env === 'fetch'
-      ? new Fetch(config)
-      : new Xhr(config)
+  getRequestInstance<T = any>(config: RequestEngineConfig) {
+    return this.engineName === EngineName.WX
+      ? new WX<T>(config)
+      : this.engineName === EngineName.MY
+      ? new MY<T>(config)
+      : this.engineName === EngineName.Fetch
+      ? new Fetch<T>(config)
+      : new Xhr<T>(config)
   }
 
-  getDownloadInstance(config: DownloadFileConfig) {
-    return this.env === 'weapp'
+  getDownloadInstance(config: DownloadEngineConfig) {
+    return this.engineName === EngineName.WX
       ? new WXDownload(config)
-      : this.env === 'aliapp'
+      : this.engineName === EngineName.MY
       ? new MYDownload(config)
-      : this.env === 'fetch'
+      : this.engineName === EngineName.Fetch
       ? new FetchDownload(config)
       : new XhrDownload(config)
   }
 
-  getUploadInstance(config: UploadFileConfig) {
-    return this.env === 'weapp'
-      ? new WXUpload(config)
-      : this.env === 'aliapp'
-      ? new MYUpload(config)
-      : this.env === 'fetch'
-      ? new FetchUpload(config)
-      : new XhrUpload(config)
+  getUploadInstance<T = any>(config: UploadEngineConfig) {
+    return this.engineName === EngineName.WX
+      ? new WXUpload<T>(config)
+      : this.engineName === EngineName.MY
+      ? new MYUpload<T>(config)
+      : this.engineName === EngineName.Fetch
+      ? new FetchUpload<T>(config)
+      : new XhrUpload<T>(config)
+  }
+
+  static createError(e: any) {
+    const err = (/^\[object\s/.test(`${e}`)
+      ? new Error(e.message)
+      : new Error(e)) as Error & { [key in string | number]: any }
+    Object.keys(e).forEach(k => {
+      err[k] = e[k]
+    })
+    return err
   }
 
   request<T = any>(
     url: string,
     data?: RequestData,
-    options?: Partial<HttpConfig>,
+    options?: Partial<RequestConfig>,
   ) {
     const { interceptors } = this.interceptors.response
     const config = this.calcConfig({ ...options, url, data })
@@ -130,18 +122,18 @@ export class Http {
           ),
         )
       const reject = (e: any) => {
-        // @ts-ignore
-        e.$request = request
+        const $e = Http.createError(e)
+        $e.$request = request
         interceptors.rejects
           .reduce(
             (pre, cb) =>
-              pre.then(result => {
-                if (typeof result === 'object') {
-                  // @ts-ignore
-                  result.$request = request
-                }
-                return cb(result as any)
-              }),
+              pre
+                .then(result => Promise.reject(result))
+                .catch(result => {
+                  const err = Http.createError(result)
+                  err.$request = request
+                  return cb(err as any)
+                }),
             Promise.resolve(e),
           )
           .then(rej)
@@ -158,15 +150,12 @@ export class Http {
    * 对应微信/支付宝小程序的 downloadFile
    * */
   downloadFile(
-    options: Partial<DownloadFileConfig> &
-      Pick<DownloadFileConfig, 'url'> & {
-        onDownloadProgress?: ProgressHandler
-      },
+    options: Partial<DownloadEngineConfig> & Pick<DownloadEngineConfig, 'url'>,
   ) {
     const config = this.calcConfig(options)
     const request = this.getDownloadInstance(config)
     return request
-      .open(options.onDownloadProgress)
+      .open()
       .then(res => ({ ...res, $request: request }))
       .catch(e => {
         e.$request = request
@@ -177,17 +166,15 @@ export class Http {
   /**
    * 对应微信/支付宝小程序的 uploadFile
    * */
-  uploadFile(
-    options: Partial<UploadFileConfig> &
-      Pick<UploadFileConfig, 'url' | 'file' | 'fileKey'> & {
-        onUploadProgress?: ProgressHandler
-      },
+  uploadFile<T = any>(
+    options: Partial<UploadEngineConfig> &
+      Pick<UploadEngineConfig, 'url' | 'file' | 'fileKey'>,
   ) {
     const config = this.calcConfig(options)
     const request = this.getUploadInstance(config)
     return request
-      .open(options.onUploadProgress)
-      .then(res => ({ ...res, $request: request }))
+      .open()
+      .then((res: RequestResponse<T>) => ({ ...res, $request: request }))
       .catch(e => {
         e.$request = request
         return Promise.reject(e)
@@ -197,7 +184,9 @@ export class Http {
   get<T = any>(
     url: string,
     data?: RequestData,
-    options?: Partial<Pick<HttpConfig, Exclude<keyof HttpConfig, 'method'>>>,
+    options?: Partial<
+      Pick<RequestConfig, Exclude<keyof RequestConfig, 'method'>>
+    >,
   ) {
     return this.request<T>(url, data, { ...options, method: 'get' })
   }
@@ -205,7 +194,9 @@ export class Http {
   post<T = any>(
     url: string,
     data?: RequestData,
-    options?: Partial<Pick<HttpConfig, Exclude<keyof HttpConfig, 'method'>>>,
+    options?: Partial<
+      Pick<RequestConfig, Exclude<keyof RequestConfig, 'method'>>
+    >,
   ) {
     return this.request<T>(url, data, { ...options, method: 'post' })
   }
@@ -213,7 +204,9 @@ export class Http {
   put<T = any>(
     url: string,
     data?: RequestData,
-    options?: Partial<Pick<HttpConfig, Exclude<keyof HttpConfig, 'method'>>>,
+    options?: Partial<
+      Pick<RequestConfig, Exclude<keyof RequestConfig, 'method'>>
+    >,
   ) {
     return this.request<T>(url, data, { ...options, method: 'put' })
   }
@@ -221,7 +214,9 @@ export class Http {
   delete<T = any>(
     url: string,
     data?: RequestData,
-    options?: Partial<Pick<HttpConfig, Exclude<keyof HttpConfig, 'method'>>>,
+    options?: Partial<
+      Pick<RequestConfig, Exclude<keyof RequestConfig, 'method'>>
+    >,
   ) {
     return this.request<T>(url, data, { ...options, method: 'delete' })
   }
