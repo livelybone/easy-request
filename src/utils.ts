@@ -91,3 +91,26 @@ export function mergeConfig<T1 extends RequestConfig, T2 extends any>(
 
   return config
 }
+
+export function getMsg(obj: any, defaultMsg = '') {
+  if (typeof obj === 'object' && obj !== null) {
+    const keys = [
+      'message',
+      'msg',
+      'error',
+      'err',
+      'errMessage',
+      'errMsg',
+      'errorMessage',
+      'errorMsg',
+    ]
+    let message = defaultMsg
+    keys.some(k => {
+      const msg = obj[k] || obj[k.toLowerCase()]
+      if (msg) message = msg
+      return !!msg
+    })
+    return message
+  }
+  return obj || defaultMsg
+}

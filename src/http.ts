@@ -14,7 +14,7 @@ import {
   RequestResponse,
   UploadEngineConfig,
 } from './type'
-import { joinUrl, mergeConfig } from './utils'
+import { getMsg, joinUrl, mergeConfig } from './utils'
 
 export class Http {
   engineName = EngineName.XHR
@@ -94,14 +94,9 @@ export class Http {
     // eslint-disable-next-line no-shadow
     function RequestError() {}
 
-    let message = 'Network request error: unknown message!'
-    if (typeof object === 'string') message = object
-    else if (object) {
-      if (object.message || object.msg) {
-        message = object.message || object.msg
-      } else if (object.data && (object.data.message || object.data.msg)) {
-        message = object.data.message || object.data.msg
-      }
+    let message = getMsg(object)
+    if (!message) {
+      message = getMsg(object.data, 'Network request error: unknown message!')
     }
 
     RequestError.prototype = new Error(message)
