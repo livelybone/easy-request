@@ -8,7 +8,9 @@ import {
   HttpInterceptors,
   RequestConfig,
   RequestData,
+  RequestEngine,
   RequestEngineConfig,
+  RequestError as $RequestError,
   RequestResponse,
   UploadEngineConfig,
 } from './type'
@@ -88,14 +90,31 @@ export class Http {
       : new XhrUpload<T>(config)
   }
 
-  static createError(e: any) {
-    const message =
-      (/^\[object\s/.test(`${e}`) && e.message) || e || 'Network request failed'
-    const err = new Error(message) as Error & { [key in string | number]: any }
-    Object.keys(e).forEach(k => {
-      err[k] = e[k]
-    })
-    return err
+  static createError(object: any, request: RequestEngine<any>): $RequestError {
+    // eslint-disable-next-line no-shadow
+    function RequestError() {}
+
+    let message = 'Network request error: unknown message!'
+    if (typeof object === 'string') message = object
+    else if (object) {
+      if (object.message || object.msg) {
+        message = object.message || object.msg
+      } else if (object.data && (object.data.message || object.data.msg)) {
+        message = object.data.message || object.data.msg
+      }
+    }
+
+    RequestError.prototype = new Error(message)
+
+    // @ts-ignore
+    const obj = new RequestError()
+    if (typeof object === 'object') {
+      Object.keys(object).forEach(k => {
+        obj[k] = object[k]
+      })
+    }
+    obj.$request = request
+    return obj
   }
 
   request<T = any>(
@@ -106,44 +125,32 @@ export class Http {
     const { interceptors } = this.interceptors.response
     const config = this.calcConfig({ ...options, url, data })
 
-    return new Promise<T>((res, rej) => {
-      const request = this.getRequestInstance(config)
-      const resolve = (response: any) =>
-        res(
-          interceptors.resolves.reduce(
-            (pre, cb) =>
-              pre.then(result => {
-                if (typeof result === 'object') {
-                  return cb({ ...result, $request: request })
-                }
-                return cb(result)
-              }),
-            Promise.resolve({ ...response, $request: request }),
-          ),
+    const request = this.getRequestInstance(config)
+    const resolve = (response: any) =>
+      interceptors.resolves.reduce(
+        (pre, cb) =>
+          pre.then(cb).then(result => {
+            if (typeof result === 'object') {
+              return { ...result, $request: request }
+            }
+            return result
+          }),
+        Promise.resolve({ ...response, $request: request }),
+      )
+    const reject = (e: any) =>
+      interceptors.rejects
+        .reduce(
+          (pre, cb) =>
+            pre
+              .then(res => Promise.reject(res))
+              .catch(result => cb(Http.createError(result, request))),
+          Promise.resolve(Http.createError(e, request)),
         )
-      const reject = (e: any) => {
-        const $e = Http.createError(e)
-        $e.$request = request
-        interceptors.rejects
-          .reduce(
-            (pre, cb) =>
-              pre
-                .then(result => Promise.reject(result))
-                .catch(result => {
-                  const err = Http.createError(result)
-                  err.$request = request
-                  return cb(err as any)
-                }),
-            Promise.resolve(e),
-          )
-          .then(rej)
-          .catch(rej)
-      }
-      request
-        .open()
-        .then(resolve)
-        .catch(reject)
-    })
+        .then(res => Promise.reject(res))
+    return request
+      .open()
+      .then(resolve)
+      .catch(reject)
   }
 
   /**

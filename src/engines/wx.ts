@@ -80,6 +80,7 @@ export class WX<T> extends WXBase<RequestEngineConfig, RequestResponse<T>>
             headers: res.header || res.headers,
             statusCode: res.statusCode || 200,
           } as RequestResponse<T>
+
           resolve(this.response)
         },
         failed: reject,

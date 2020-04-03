@@ -164,7 +164,7 @@ interface RequestEngine<Config = RequestEngineConfig, Response = any> {
 declare type ConfigInterceptor = (config: any) => any
 declare type ResponseInterceptor = (response: any) => any
 declare type RequestError = Error & {
-  $request: RequestEngine
+  $request: RequestEngine<any>
   [key: string]: any
   [key: number]: any
 }
@@ -383,18 +383,13 @@ declare class Http {
     config: UploadEngineConfig,
   ): WXUpload<T> | MYUpload<T> | FetchUpload<T> | XhrUpload<T>
 
-  static createError(
-    e: any,
-  ): Error & {
-    [x: string]: any
-    [x: number]: any
-  }
+  static createError(object: any, request: RequestEngine<any>): RequestError
 
   request<T = any>(
     url: string,
     data?: RequestData,
     options?: Partial<RequestConfig>,
-  ): Promise<T>
+  ): Promise<any>
 
   /**
    * 对应微信/支付宝小程序的 downloadFile
@@ -430,7 +425,7 @@ declare class Http {
     options?: Partial<
       Pick<RequestConfig, Exclude<keyof RequestConfig, 'method'>>
     >,
-  ): Promise<T>
+  ): Promise<any>
 
   post<T = any>(
     url: string,
@@ -438,7 +433,7 @@ declare class Http {
     options?: Partial<
       Pick<RequestConfig, Exclude<keyof RequestConfig, 'method'>>
     >,
-  ): Promise<T>
+  ): Promise<any>
 
   put<T = any>(
     url: string,
@@ -446,7 +441,7 @@ declare class Http {
     options?: Partial<
       Pick<RequestConfig, Exclude<keyof RequestConfig, 'method'>>
     >,
-  ): Promise<T>
+  ): Promise<any>
 
   delete<T = any>(
     url: string,
@@ -454,7 +449,7 @@ declare class Http {
     options?: Partial<
       Pick<RequestConfig, Exclude<keyof RequestConfig, 'method'>>
     >,
-  ): Promise<T>
+  ): Promise<any>
 }
 
 export default Http

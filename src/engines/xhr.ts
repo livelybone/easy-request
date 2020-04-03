@@ -42,12 +42,7 @@ function openXhr<T extends any, RT extends any>(
       xhr.onreadystatechange = () => {
         if (xhr.readyState === 4) {
           // 4 = "loaded"
-          if (xhr.status === 200) {
-            // 200 = OK
-            resolve(responseMap(xhr.response) as any)
-          } else {
-            reject(responseMap(xhr.response))
-          }
+          resolve(responseMap(xhr.response) as any)
         }
       }
 
@@ -131,17 +126,15 @@ class XhrBase<Config, Response> extends BaseEngine<Config, Response> {
 export class Xhr<T> extends XhrBase<RequestEngineConfig, RequestResponse<T>>
   implements RequestEngine<RequestEngineConfig, RequestResponse<T>> {
   open() {
-    return openXhr(
-      this.requestInstance,
-      this.config,
-      (res: T) =>
-        ({
-          url: this.config.url,
-          data: res,
-          statusCode: this.requestInstance.status,
-          headers: dealHeadersStr(this.requestInstance.getAllResponseHeaders()),
-        } as RequestResponse<T>),
-    )
+    return openXhr(this.requestInstance, this.config, (res: T) => {
+      this.response = {
+        url: this.config.url,
+        data: res,
+        statusCode: this.requestInstance.status,
+        headers: dealHeadersStr(this.requestInstance.getAllResponseHeaders()),
+      } as RequestResponse<T>
+      return this.response
+    })
   }
 }
 
@@ -157,13 +150,16 @@ export class XhrDownload extends XhrBase<DownloadEngineConfig, DownloadResponse>
         withCredentials: true,
       },
       (res: Blob) =>
-        Promise.resolve(getBlobUrl(res)).then(tempFilePath => ({
-          url: this.config.url,
-          tempFilePath,
-          filePath: this.config.filePath,
-          statusCode: this.requestInstance.status,
-          blob: res,
-        })) as Promise<DownloadResponse>,
+        Promise.resolve(getBlobUrl(res)).then(tempFilePath => {
+          this.response = {
+            url: this.config.url,
+            tempFilePath,
+            filePath: this.config.filePath,
+            statusCode: this.requestInstance.status,
+            blob: res,
+          }
+          return this.response
+        }) as Promise<DownloadResponse>,
     )
   }
 }
@@ -188,13 +184,15 @@ export class XhrUpload<T>
           'Content-Type': 'multipart/form-data',
         },
       },
-      (res: T) =>
-        ({
+      (res: T) => {
+        this.response = {
           url: this.config.url,
           data: res,
           statusCode: this.requestInstance.status || 200,
           headers: dealHeadersStr(this.requestInstance.getAllResponseHeaders()),
-        } as RequestResponse<T>),
+        } as RequestResponse<T>
+        return this.response
+      },
     )
   }
 }

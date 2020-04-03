@@ -162,7 +162,7 @@ export interface RequestEngine<Config = RequestEngineConfig, Response = any> {
 export type ConfigInterceptor = (config: any) => any
 export type ResponseInterceptor = (response: any) => any
 export type RequestError = Error & {
-  $request: RequestEngine
+  $request: RequestEngine<any>
   [key: string]: any
   [key: number]: any
 }

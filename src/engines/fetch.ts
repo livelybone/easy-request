@@ -102,10 +102,7 @@ export class Fetch<T> extends FetchBase<RequestEngineConfig, RequestResponse<T>>
           : response.text(),
       ).then(data => {
         this.response.data = data
-        if (response.ok) {
-          return this.response
-        }
-        return Promise.reject(this.response)
+        return this.response
       })
     }) as Promise<RequestResponse<T>>
   }
@@ -136,10 +133,7 @@ export class FetchDownload
           filePath: this.config.filePath,
           statusCode: response.status,
         }
-        if (response.ok) {
-          return this.response
-        }
-        return Promise.reject(this.response)
+        return this.response
       })
     }) as Promise<DownloadResponse>
   }
@@ -179,10 +173,7 @@ export class FetchUpload<T>
           : response.text(),
       ).then(data => {
         this.response.data = data
-        if (response.ok) {
-          return this.response
-        }
-        return Promise.reject(this.response)
+        return this.response
       })
     }) as Promise<RequestResponse<T>>
   }
