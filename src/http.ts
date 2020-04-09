@@ -112,6 +112,13 @@ export class Http {
     return obj
   }
 
+  static dealResponse(result: any, request: any) {
+    if (typeof result === 'object' && result !== null) {
+      result.$request = request
+    }
+    return result
+  }
+
   request<T = any>(
     url: string,
     data?: RequestData,
@@ -121,17 +128,12 @@ export class Http {
     const config = this.calcConfig({ ...options, url, data })
 
     const request = this.getRequestInstance(config)
-    const resolve = (response: any) =>
+    const resolve = (response: any) => {
       interceptors.resolves.reduce(
-        (pre, cb) =>
-          pre.then(cb).then(result => {
-            if (typeof result === 'object') {
-              return { ...result, $request: request }
-            }
-            return result
-          }),
-        Promise.resolve({ ...response, $request: request }),
+        (pre, cb) => pre.then(cb).then(res => Http.dealResponse(res, request)),
+        Promise.resolve(Http.dealResponse(response, request)),
       )
+    }
     const reject = (e: any) =>
       interceptors.rejects
         .reduce(
