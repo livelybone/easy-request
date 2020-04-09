@@ -129,13 +129,13 @@ export class Http {
 
     const request = this.getRequestInstance(config)
     const resolve = (response: any) => {
-      interceptors.resolves.reduce(
+      return interceptors.resolves.reduce(
         (pre, cb) => pre.then(cb).then(res => Http.dealResponse(res, request)),
         Promise.resolve(Http.dealResponse(response, request)),
       )
     }
-    const reject = (e: any) =>
-      interceptors.rejects
+    const reject = (e: any) => {
+      return interceptors.rejects
         .reduce(
           (pre, cb) =>
             pre
@@ -144,6 +144,7 @@ export class Http {
           Promise.resolve(Http.createError(e, request)),
         )
         .then(res => Promise.reject(res))
+    }
     return request
       .open()
       .then(resolve)
