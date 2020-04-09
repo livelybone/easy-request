@@ -71,29 +71,27 @@ function openXhr<T extends any, RT extends any>(
           })
       }
 
-      const url =
-        config.method !== 'GET'
-          ? config.url
-          : joinUrl('', config.url, config.data)
+      let { url } = config
+      let data = null
+      if (config.method === 'GET') {
+        delete config.headers['Content-Type']
+        url = joinUrl('', config.url, config.data)
+      } else {
+        data = dealRequestData(
+          config.data,
+          config.headers['Content-Type'],
+          config.convertFormDataOptions,
+        )
+        if (config.headers['Content-Type'] === 'multipart/form-data' || !data)
+          delete config.headers['Content-Type']
+      }
+
       xhr.open(config.method, url, true)
 
       Object.keys(config.headers).forEach(k => {
-        if (
-          k !== 'Content-Type' ||
-          (config.headers[k] !== 'multipart/form-data' && config.data)
-        ) {
-          xhr.setRequestHeader(k, config.headers[k])
-        }
+        xhr.setRequestHeader(k, config.headers[k])
       })
 
-      const data =
-        config.method !== 'GET'
-          ? dealRequestData(
-              config.data,
-              config.headers['Content-Type'],
-              config.convertFormDataOptions,
-            )
-          : null
       xhr.send(data)
     },
   )

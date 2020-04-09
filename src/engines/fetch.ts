@@ -38,17 +38,18 @@ function getOptions(config: any, requestTask: any) {
     referrer: 'no-referrer' as 'client' | 'no-referrer',
   }
   if (['GET', 'HEAD'].includes(options.method)) {
+    delete config.headers['Content-Type']
     options.url = joinUrl(config.baseURL, config.url, config.data)
   } else {
     const contentType = config.headers['Content-Type']
-    if (contentType === 'multipart/form-data' || !config.data) {
-      delete config.headers['Content-Type']
-    }
     options.body = dealRequestData(
       config.data,
       contentType,
       config.convertFormDataOptions,
     )
+    if (contentType === 'multipart/form-data' || !options.body) {
+      delete config.headers['Content-Type']
+    }
   }
   return options
 }
