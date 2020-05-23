@@ -60,14 +60,14 @@ export class Http {
     })
   }
 
-  getRequestInstance<T = any>(config: RequestEngineConfig) {
+  getRequestInstance(config: RequestEngineConfig) {
     return this.engineName === EngineName.WX
-      ? new WX<T>(config)
+      ? new WX(config)
       : this.engineName === EngineName.MY
-      ? new MY<T>(config)
+      ? new MY(config)
       : this.engineName === EngineName.Fetch
-      ? new Fetch<T>(config)
-      : new Xhr<T>(config)
+      ? new Fetch(config)
+      : new Xhr(config)
   }
 
   getDownloadInstance(config: DownloadEngineConfig) {
@@ -80,14 +80,14 @@ export class Http {
       : new XhrDownload(config)
   }
 
-  getUploadInstance<T = any>(config: UploadEngineConfig) {
+  getUploadInstance(config: UploadEngineConfig) {
     return this.engineName === EngineName.WX
-      ? new WXUpload<T>(config)
+      ? new WXUpload(config)
       : this.engineName === EngineName.MY
-      ? new MYUpload<T>(config)
+      ? new MYUpload(config)
       : this.engineName === EngineName.Fetch
-      ? new FetchUpload<T>(config)
-      : new XhrUpload<T>(config)
+      ? new FetchUpload(config)
+      : new XhrUpload(config)
   }
 
   static createError(object: any, request: RequestEngine<any>): $RequestError {
@@ -112,18 +112,21 @@ export class Http {
     return obj
   }
 
-  static dealResponse(result: any, request: any) {
+  static dealResponse<T extends any>(
+    result: T,
+    request: any,
+  ): T extends { [k in string | number]: any } ? T & { $request: any } : T {
     if (typeof result === 'object' && result !== null) {
       result.$request = request
     }
-    return result
+    return result as any
   }
 
-  request<T = any>(
+  request<T extends any = any>(
     url: string,
     data?: RequestData,
     options?: Partial<RequestConfig>,
-  ) {
+  ): Promise<T> {
     const { interceptors } = this.interceptors.response
     const config = this.calcConfig({ ...options, url, data })
 
@@ -148,7 +151,7 @@ export class Http {
     return request
       .open()
       .then(resolve)
-      .catch(reject)
+      .catch(reject) as any
   }
 
   /**
@@ -161,7 +164,7 @@ export class Http {
     const request = this.getDownloadInstance(config)
     return request
       .open()
-      .then(res => ({ ...res, $request: request }))
+      .then(res => Http.dealResponse(res, request))
       .catch(e => {
         e.$request = request
         return Promise.reject(e)
@@ -171,22 +174,22 @@ export class Http {
   /**
    * 对应微信/支付宝小程序的 uploadFile
    * */
-  uploadFile<T = any>(
+  uploadFile<T extends any = any>(
     options: Partial<UploadEngineConfig> &
       Pick<UploadEngineConfig, 'url' | 'file' | 'fileKey'>,
-  ) {
+  ): Promise<T> {
     const config = this.calcConfig(options)
     const request = this.getUploadInstance(config)
     return request
       .open()
-      .then((res: RequestResponse<T>) => ({ ...res, $request: request }))
+      .then((res: RequestResponse) => Http.dealResponse(res, request))
       .catch(e => {
         e.$request = request
         return Promise.reject(e)
-      })
+      }) as any
   }
 
-  get<T = any>(
+  get<T extends any = any>(
     url: string,
     data?: RequestData,
     options?: Partial<
@@ -196,7 +199,7 @@ export class Http {
     return this.request<T>(url, data, { ...options, method: 'get' })
   }
 
-  post<T = any>(
+  post<T extends any = any>(
     url: string,
     data?: RequestData,
     options?: Partial<
@@ -206,7 +209,7 @@ export class Http {
     return this.request<T>(url, data, { ...options, method: 'post' })
   }
 
-  put<T = any>(
+  put<T extends any = any>(
     url: string,
     data?: RequestData,
     options?: Partial<
@@ -216,7 +219,7 @@ export class Http {
     return this.request<T>(url, data, { ...options, method: 'put' })
   }
 
-  delete<T = any>(
+  delete<T extends any = any>(
     url: string,
     data?: RequestData,
     options?: Partial<
