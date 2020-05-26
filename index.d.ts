@@ -8,6 +8,7 @@ declare type ResponseType =
   | 'arraybuffer'
   | 'JSON'
   | 'base64'
+
 declare enum EngineName {
   /** 微信小程序 api */
   WX = 'wx',
@@ -18,19 +19,23 @@ declare enum EngineName {
   /** fetch api */
   Fetch = 'fetch',
 }
+
 interface ProgressEv {
   total: number
   transmitted: number
   progress: number
 }
+
 interface HttpHeaders {
   [key: string]: string
 }
+
 declare type RequestData =
   | {
       [key in string | number]: any
     }
   | FormData
+
 interface RequestSharedConfig {
   method: string
   /**
@@ -56,28 +61,37 @@ interface RequestSharedConfig {
   convertFormDataOptions?: Parameters<typeof objectToFormData>[1] & {
     customConvertFn?(data: Exclude<RequestData, FormData>): FormData
   }
+
   [key: string]: any
+
   [key: number]: any
 }
+
 interface RequestEngineConfig extends RequestSharedConfig {
   url: string
   data?: RequestData | null
+
   /** do not work in engine: wx, my, fetch */
   onUploadProgress?(ev: ProgressEv): void
+
   /** do not work in engine: wx, my, fetch */
   onDownloadProgress?(ev: ProgressEv): void
 }
+
 interface RequestConfig extends RequestSharedConfig {
   baseURL: string
 }
+
 interface RequestResponse<T = any> {
   /** api url */
   url: string
   data: T
   statusCode: number
   headers: HttpHeaders
+
   [key: string]: any
 }
+
 interface DownloadEngineConfig {
   url: string
   headers: HttpHeaders
@@ -90,9 +104,12 @@ interface DownloadEngineConfig {
    * */
   filePath: string
   convertFormDataOptions?: RequestSharedConfig['convertFormDataOptions']
+
   onDownloadProgress?(ev: ProgressEv): void
+
   [key: string]: any
 }
+
 interface DownloadResponse {
   /** api url */
   url: string
@@ -100,8 +117,10 @@ interface DownloadResponse {
   filePath: string
   statusCode: number
   blob?: Blob
+
   [key: string]: any
 }
+
 interface UploadEngineConfig {
   url: string
   timeout: RequestSharedConfig['timeout']
@@ -124,18 +143,24 @@ interface UploadEngineConfig {
   fileType?: 'image' | 'video' | 'audio'
   extraData: RequestData
   convertFormDataOptions?: RequestSharedConfig['convertFormDataOptions']
+
   onUploadProgress?(ev: ProgressEv): void
+
   [key: string]: any
 }
+
 interface RequestEngine<Config = RequestEngineConfig, Response = any> {
   name: EngineName
   config: Config
   response: Response | RequestResponse<null>
   requestInstance: any
   requestTask: any
+
   open(): Promise<Response>
+
   abort(): void
 }
+
 declare type ConfigInterceptor = (config: any) => any
 declare type ResponseInterceptor = (response: any) => any
 declare type RequestError = Error & {
@@ -144,6 +169,7 @@ declare type RequestError = Error & {
   [key: number]: any
 }
 declare type ErrorHandler = (e: RequestError) => any
+
 interface HttpInterceptors {
   request: {
     interceptors: ConfigInterceptor[]
@@ -179,16 +205,19 @@ declare class FetchBase<Config, Response> extends BaseEngine<Config, Response> {
 
   getConfig(): any
 }
+
 declare class Fetch<T>
   extends FetchBase<RequestEngineConfig, RequestResponse<T>>
   implements RequestEngine<RequestEngineConfig, RequestResponse<T>> {
   open(): Promise<RequestResponse<T>>
 }
+
 declare class FetchDownload
   extends FetchBase<DownloadEngineConfig, DownloadResponse>
   implements RequestEngine<DownloadEngineConfig, DownloadResponse> {
   open(): Promise<DownloadResponse>
 }
+
 declare class FetchUpload<T>
   extends FetchBase<UploadEngineConfig, RequestResponse<T>>
   implements RequestEngine<UploadEngineConfig, RequestResponse<T>> {
@@ -202,6 +231,7 @@ declare class MYBase<Config, Response> extends BaseEngine<Config, Response> {
 
   abort(): void
 }
+
 declare class MY<T> extends MYBase<RequestEngineConfig, RequestResponse<T>>
   implements RequestEngine<RequestEngineConfig, RequestResponse<T>> {
   getConfig(): {
@@ -223,6 +253,7 @@ declare class MY<T> extends MYBase<RequestEngineConfig, RequestResponse<T>>
 
   open(): Promise<RequestResponse<T>>
 }
+
 declare class MYDownload extends MYBase<DownloadEngineConfig, DownloadResponse>
   implements RequestEngine<DownloadEngineConfig, DownloadResponse> {
   getConfig(): {
@@ -233,6 +264,7 @@ declare class MYDownload extends MYBase<DownloadEngineConfig, DownloadResponse>
 
   open(): Promise<DownloadResponse>
 }
+
 declare class MYUpload<T> extends MYBase<UploadEngineConfig, RequestResponse<T>>
   implements RequestEngine<UploadEngineConfig, RequestResponse<T>> {
   getConfig(): {
@@ -255,6 +287,7 @@ declare class WXBase<Config, Response> extends BaseEngine<Config, Response> {
 
   abort(): void
 }
+
 declare class WX<T> extends WXBase<RequestEngineConfig, RequestResponse<T>>
   implements RequestEngine<RequestEngineConfig, RequestResponse<T>> {
   getConfig(): {
@@ -276,6 +309,7 @@ declare class WX<T> extends WXBase<RequestEngineConfig, RequestResponse<T>>
 
   open(): Promise<RequestResponse<T>>
 }
+
 declare class WXDownload extends WXBase<DownloadEngineConfig, DownloadResponse>
   implements RequestEngine<DownloadEngineConfig, DownloadResponse> {
   getConfig(): {
@@ -288,6 +322,7 @@ declare class WXDownload extends WXBase<DownloadEngineConfig, DownloadResponse>
 
   open(): Promise<DownloadResponse>
 }
+
 declare class WXUpload<T> extends WXBase<UploadEngineConfig, RequestResponse<T>>
   implements RequestEngine<UploadEngineConfig, RequestResponse<T>> {
   getConfig(): {
@@ -307,15 +342,18 @@ declare class XhrBase<Config, Response> extends BaseEngine<Config, Response> {
 
   abort(): void
 }
+
 declare class Xhr<T> extends XhrBase<RequestEngineConfig, RequestResponse<T>>
   implements RequestEngine<RequestEngineConfig, RequestResponse<T>> {
   open(): Promise<RequestResponse<T>>
 }
+
 declare class XhrDownload
   extends XhrBase<DownloadEngineConfig, DownloadResponse>
   implements RequestEngine<DownloadEngineConfig, DownloadResponse> {
   open(): Promise<DownloadResponse>
 }
+
 declare class XhrUpload<T>
   extends XhrBase<UploadEngineConfig, RequestResponse<T>>
   implements RequestEngine<UploadEngineConfig, RequestResponse<T>> {

@@ -39,7 +39,7 @@ function getOptions(config: any, requestTask: any) {
   }
   if (['GET', 'HEAD'].includes(options.method)) {
     delete config.headers['Content-Type']
-    options.url = joinUrl(config.baseURL, config.url, config.data)
+    options.url = joinUrl('/', config.url, config.data)
   } else {
     const contentType = config.headers['Content-Type']
     options.body = dealRequestData(
