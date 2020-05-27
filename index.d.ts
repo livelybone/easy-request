@@ -369,7 +369,7 @@ declare class Http {
 
   constructor(engineName?: EngineName, config?: Partial<RequestConfig>)
 
-  calcConfig(config?: any): any
+  calcConfig(config?: any): Promise<any>
 
   getRequestInstance(
     config: RequestEngineConfig,

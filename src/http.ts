@@ -54,10 +54,10 @@ export class Http {
   calcConfig(config?: any) {
     const $config = mergeConfig(this.config, config)
     const $url = joinUrl($config.baseURL, config.url)
-    return this.interceptors.request.interceptors.reduce((pre, cb) => cb(pre), {
-      ...$config,
-      url: $url,
-    })
+    return this.interceptors.request.interceptors.reduce(
+      (pre, cb) => pre.then(it => Promise.resolve(cb(it))),
+      Promise.resolve({ ...$config, url: $url }),
+    )
   }
 
   getRequestInstance(config: RequestEngineConfig) {
@@ -128,30 +128,32 @@ export class Http {
     options?: Partial<RequestConfig>,
   ): Promise<T> {
     const { interceptors } = this.interceptors.response
-    const config = this.calcConfig({ ...options, url, data })
 
-    const request = this.getRequestInstance(config)
-    const resolve = (response: any) => {
-      return interceptors.resolves.reduce(
-        (pre, cb) => pre.then(cb).then(res => Http.dealResponse(res, request)),
-        Promise.resolve(Http.dealResponse(response, request)),
-      )
-    }
-    const reject = (e: any) => {
-      return interceptors.rejects
-        .reduce(
+    return this.calcConfig({ ...options, url, data }).then(config => {
+      const request = this.getRequestInstance(config)
+      const resolve = (response: any) => {
+        return interceptors.resolves.reduce(
           (pre, cb) =>
-            pre
-              .then(res => Promise.reject(res))
-              .catch(result => cb(Http.createError(result, request))),
-          Promise.resolve(Http.createError(e, request)),
+            pre.then(cb).then(res => Http.dealResponse(res, request)),
+          Promise.resolve(Http.dealResponse(response, request)),
         )
-        .then(res => Promise.reject(res))
-    }
-    return request
-      .open()
-      .then(resolve)
-      .catch(reject) as any
+      }
+      const reject = (e: any) => {
+        return interceptors.rejects
+          .reduce(
+            (pre, cb) =>
+              pre
+                .then(res => Promise.reject(res))
+                .catch(result => cb(Http.createError(result, request))),
+            Promise.resolve(Http.createError(e, request)),
+          )
+          .then(res => Promise.reject(res))
+      }
+      return request
+        .open()
+        .then(resolve)
+        .catch(reject) as any
+    })
   }
 
   /**
@@ -160,15 +162,16 @@ export class Http {
   downloadFile(
     options: Partial<DownloadEngineConfig> & Pick<DownloadEngineConfig, 'url'>,
   ) {
-    const config = this.calcConfig(options)
-    const request = this.getDownloadInstance(config)
-    return request
-      .open()
-      .then(res => Http.dealResponse(res, request))
-      .catch(e => {
-        e.$request = request
-        return Promise.reject(e)
-      })
+    return this.calcConfig(options).then(config => {
+      const request = this.getDownloadInstance(config)
+      return request
+        .open()
+        .then(res => Http.dealResponse(res, request))
+        .catch(e => {
+          e.$request = request
+          return Promise.reject(e)
+        })
+    })
   }
 
   /**
@@ -178,15 +181,16 @@ export class Http {
     options: Partial<UploadEngineConfig> &
       Pick<UploadEngineConfig, 'url' | 'file' | 'fileKey'>,
   ): Promise<T> {
-    const config = this.calcConfig(options)
-    const request = this.getUploadInstance(config)
-    return request
-      .open()
-      .then((res: RequestResponse) => Http.dealResponse(res, request))
-      .catch(e => {
-        e.$request = request
-        return Promise.reject(e)
-      }) as any
+    return this.calcConfig(options).then(config => {
+      const request = this.getUploadInstance(config)
+      return request
+        .open()
+        .then((res: RequestResponse) => Http.dealResponse(res, request))
+        .catch(e => {
+          e.$request = request
+          return Promise.reject(e)
+        }) as any
+    })
   }
 
   get<T extends any = any>(
