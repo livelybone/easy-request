@@ -113,10 +113,16 @@ interface DownloadEngineConfig {
 interface DownloadResponse {
   /** api url */
   url: string
+  /** base64 url */
   tempFilePath: string
   filePath: string
   statusCode: number
+  /** filename that get from server */
+  filename: string
   blob?: Blob
+  headers?: {
+    [k: string]: string
+  }
 
   [key: string]: any
 }

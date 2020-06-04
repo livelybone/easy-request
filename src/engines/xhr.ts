@@ -10,7 +10,7 @@ import {
   RequestResponse,
   UploadEngineConfig,
 } from '../type'
-import { dealRequestData, getBlobUrl, joinUrl } from '../utils'
+import { dealRequestData, getBlobUrl, getFileName, joinUrl } from '../utils'
 import { BaseEngine } from './base'
 
 declare const XMLHttpRequest: any
@@ -147,19 +147,26 @@ export class XhrDownload extends XhrBase<DownloadEngineConfig, DownloadResponse>
         responseType: 'blob',
         withCredentials: true,
       },
-      (res: Promise<Blob | undefined>) =>
-        res.then(blob =>
-          getBlobUrl(blob).then(tempFilePath => {
-            this.response = {
-              url: this.config.url,
-              tempFilePath,
-              filePath: this.config.filePath,
-              statusCode: this.requestInstance.status,
-              blob,
-            }
-            return this.response
-          }),
-        ) as Promise<DownloadResponse>,
+      (blob: Blob) =>
+        getBlobUrl(blob).then(tempFilePath => {
+          const headers = dealHeadersStr(
+            this.requestInstance.getAllResponseHeaders(),
+          )
+          const filename = getFileName(headers)
+          ;(blob as any).name = filename
+          this.response = {
+            url: this.config.url,
+            tempFilePath,
+            filePath: this.config.filePath,
+            statusCode: this.requestInstance.status,
+            blob,
+            headers: dealHeadersStr(
+              this.requestInstance.getAllResponseHeaders(),
+            ),
+            filename,
+          }
+          return this.response
+        }) as Promise<DownloadResponse>,
     )
   }
 }

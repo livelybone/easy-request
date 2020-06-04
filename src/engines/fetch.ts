@@ -10,7 +10,7 @@ import {
   RequestResponse,
   UploadEngineConfig,
 } from '../type'
-import { dealRequestData, getBlobUrl, joinUrl } from '../utils'
+import { dealRequestData, getBlobUrl, getFileName, joinUrl } from '../utils'
 import { BaseEngine } from './base'
 
 declare const fetch: any
@@ -127,12 +127,22 @@ export class FetchDownload
     return this.requestInstance(url, config).then((response: any) => {
       return response.blob().then((blob?: Blob) =>
         getBlobUrl(blob).then(tempFilePath => {
+          const headers = response.headers
+            .entries()
+            .reduce(
+              (pre: any, [k, val]: [string, string]) => ({ ...pre, [k]: val }),
+              {},
+            )
+          const filename = getFileName(headers)
+          ;(blob as any).name = filename
           this.response = {
             url: response.url || url,
             blob,
             tempFilePath,
             filePath: this.config.filePath,
             statusCode: response.status,
+            headers,
+            filename,
           }
           return this.response
         }),

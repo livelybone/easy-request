@@ -2,6 +2,7 @@ import { blobToBase64 } from 'base64-blob'
 import { objectToFormData } from 'object-to-formdata'
 import { stringify } from 'qs'
 import {
+  DownloadResponse,
   HttpHeaders,
   RequestConfig,
   RequestData,
@@ -115,4 +116,11 @@ export function getMsg(obj: any, defaultMsg = '') {
     return message
   }
   return obj || defaultMsg
+}
+
+export function getFileName(headers: DownloadResponse['headers']) {
+  const disposition = headers && headers['content-disposition']
+  if (!disposition) return ''
+  const matched = disposition.match(/(file)?name\s*=\s*([^=]+)($|,)/)
+  return (matched && matched[2]) || ''
 }
