@@ -15,7 +15,7 @@ var module = document.getElementById('module')
 
 const { Http, EngineName } = EasyRequest
 
-const http = new Http(EngineName.XHR)
+const http = new Http(EngineName.Fetch)
 
 http.interceptors.request.use(config => {
   console.log(config)
