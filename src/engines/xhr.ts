@@ -149,7 +149,7 @@ export class XhrDownload extends XhrBase<DownloadEngineConfig, DownloadResponse>
       },
       (res: Promise<Blob | undefined>) =>
         res.then(blob =>
-          Promise.resolve(getBlobUrl(blob)).then(tempFilePath => {
+          getBlobUrl(blob).then(tempFilePath => {
             this.response = {
               url: this.config.url,
               tempFilePath,

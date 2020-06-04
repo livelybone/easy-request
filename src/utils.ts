@@ -21,14 +21,14 @@ export function joinUrl(
 }
 
 export function getBlobUrl(blob?: Blob) {
-  if (!blob) return ''
+  if (!blob) return Promise.resolve('')
 
   if (URL && URL.createObjectURL) {
     const url = URL.createObjectURL(blob)
     console.warn(
       `ObjectURL \`${url}\` has been created in the app, make sure you will revoke it at the right time in you code by script \`URL.revokeObjectURL(${url})\``,
     )
-    return url
+    return Promise.resolve(url)
   }
   return blobToBase64(blob)
 }

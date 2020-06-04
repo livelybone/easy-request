@@ -125,17 +125,18 @@ export class FetchDownload
 
     const { url, ...config } = this.getConfig()
     return this.requestInstance(url, config).then((response: any) => {
-      const blob = response.blob()
-      return Promise.resolve(getBlobUrl(blob)).then(tempFilePath => {
-        this.response = {
-          url: response.url || url,
-          blob,
-          tempFilePath,
-          filePath: this.config.filePath,
-          statusCode: response.status,
-        }
-        return this.response
-      })
+      return response.blob().then((blob?: Blob) =>
+        getBlobUrl(blob).then(tempFilePath => {
+          this.response = {
+            url: response.url || url,
+            blob,
+            tempFilePath,
+            filePath: this.config.filePath,
+            statusCode: response.status,
+          }
+          return this.response
+        }),
+      )
     }) as Promise<DownloadResponse>
   }
 }
