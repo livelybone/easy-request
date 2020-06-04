@@ -125,14 +125,12 @@ export class FetchDownload
 
     const { url, ...config } = this.getConfig()
     return this.requestInstance(url, config).then((response: any) => {
+      const headers = [...response.headers.entries()].reduce(
+        (pre: any, [k, val]: [string, string]) => ({ ...pre, [k]: val }),
+        {},
+      )
       return response.blob().then((blob?: Blob) =>
         getBlobUrl(blob).then(tempFilePath => {
-          const headers = response.headers
-            .entries()
-            .reduce(
-              (pre: any, [k, val]: [string, string]) => ({ ...pre, [k]: val }),
-              {},
-            )
           const filename = getFileName(headers)
           ;(blob as any).name = filename
           this.response = {
