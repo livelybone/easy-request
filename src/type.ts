@@ -110,6 +110,7 @@ export interface DownloadEngineConfig {
 export interface DownloadResponse {
   /** api url */
   url: string
+  /** base64 url */
   tempFilePath: string
   filePath: string
   statusCode: number

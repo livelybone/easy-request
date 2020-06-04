@@ -147,17 +147,19 @@ export class XhrDownload extends XhrBase<DownloadEngineConfig, DownloadResponse>
         responseType: 'blob',
         withCredentials: true,
       },
-      (res: Blob) =>
-        Promise.resolve(getBlobUrl(res)).then(tempFilePath => {
-          this.response = {
-            url: this.config.url,
-            tempFilePath,
-            filePath: this.config.filePath,
-            statusCode: this.requestInstance.status,
-            blob: res,
-          }
-          return this.response
-        }) as Promise<DownloadResponse>,
+      (res: Promise<Blob | undefined>) =>
+        res.then(blob =>
+          Promise.resolve(getBlobUrl(blob)).then(tempFilePath => {
+            this.response = {
+              url: this.config.url,
+              tempFilePath,
+              filePath: this.config.filePath,
+              statusCode: this.requestInstance.status,
+              blob,
+            }
+            return this.response
+          }),
+        ) as Promise<DownloadResponse>,
     )
   }
 }
