@@ -59,7 +59,8 @@ export class FetchBase<Config, Response> extends BaseEngine<Config, Response> {
 
   constructor(config: Config) {
     super(config)
-    if (fetch) this.requestInstance = (...args: any[]) => fetch(...args)
+    if (typeof fetch !== 'function')
+      this.requestInstance = (...args: any[]) => fetch(...args)
     if (typeof AbortController !== 'undefined')
       this.requestTask = new AbortController()
   }
