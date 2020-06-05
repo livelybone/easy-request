@@ -59,7 +59,7 @@ export class FetchBase<Config, Response> extends BaseEngine<Config, Response> {
 
   constructor(config: Config) {
     super(config)
-    if (typeof fetch !== 'function')
+    if (typeof fetch === 'function')
       this.requestInstance = (...args: any[]) => fetch(...args)
     if (typeof AbortController !== 'undefined')
       this.requestTask = new AbortController()
@@ -77,6 +77,31 @@ export class FetchBase<Config, Response> extends BaseEngine<Config, Response> {
   }
 }
 
+function dealRequest<T>(ctx: any) {
+  const { url, ...config } = ctx.getConfig()
+  return ctx.requestInstance(url, config).then((response: any) => {
+    ctx.response = {
+      url: response.url || url,
+      statusCode: response.status,
+      headers: response.headers,
+      data: null,
+    }
+    const { responseType } = ctx.config
+    return Promise.resolve(
+      responseType === 'blob'
+        ? response.blob()
+        : responseType === 'json'
+        ? response.json()
+        : responseType === 'arraybuffer'
+        ? response.arrayBuffer()
+        : response.text(),
+    ).then(data => {
+      ctx.response.data = data
+      return ctx.response
+    })
+  }) as Promise<RequestResponse<T>>
+}
+
 export class Fetch<T> extends FetchBase<RequestEngineConfig, RequestResponse<T>>
   implements RequestEngine<RequestEngineConfig, RequestResponse<T>> {
   open() {
@@ -86,28 +111,7 @@ export class Fetch<T> extends FetchBase<RequestEngineConfig, RequestResponse<T>>
       )
     }
 
-    const { url, ...config } = this.getConfig()
-    return this.requestInstance(url, config).then((response: any) => {
-      this.response = {
-        url: response.url || url,
-        statusCode: response.status,
-        headers: response.headers,
-        data: null,
-      }
-      const { responseType } = this.config
-      return Promise.resolve(
-        responseType === 'blob'
-          ? response.blob()
-          : responseType === 'json'
-          ? response.json()
-          : responseType === 'arraybuffer'
-          ? response.arrayBuffer()
-          : response.text(),
-      ).then(data => {
-        this.response.data = data
-        return this.response
-      })
-    }) as Promise<RequestResponse<T>>
+    return dealRequest<T>(this)
   }
 }
 
@@ -132,7 +136,7 @@ export class FetchDownload
         {},
       )
       return response.blob().then((blob?: Blob) =>
-        getBlobUrl(blob).then(tempFilePath => {
+        getBlobUrl(blob, !!this.config.filePath).then(tempFilePath => {
           const filename = getFileName(headers)
           ;(blob as any).name = filename
           this.response = {
@@ -161,32 +165,10 @@ export class FetchUpload<T>
       )
     }
 
-    const { url, ...config } = this.getConfig()
-
     if (this.config.onUploadProgress) {
       console.warn(new Error('Download progress does not support yet in fetch'))
     }
 
-    return this.requestInstance(url, config).then((response: any) => {
-      this.response = {
-        url: response.url || url,
-        data: null,
-        statusCode: response.status,
-        headers: response.headers,
-      }
-      const { responseType } = this.config
-      return Promise.resolve(
-        responseType === 'blob'
-          ? response.blob()
-          : responseType === 'json'
-          ? response.json()
-          : responseType === 'arraybuffer'
-          ? response.arrayBuffer()
-          : response.text(),
-      ).then(data => {
-        this.response.data = data
-        return this.response
-      })
-    }) as Promise<RequestResponse<T>>
+    return dealRequest<T>(this)
   }
 }

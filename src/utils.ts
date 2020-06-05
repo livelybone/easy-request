@@ -21,8 +21,8 @@ export function joinUrl(
   return `${$url}?&${stringify(data)}`.replace(/\?+&+/, '?')
 }
 
-export function getBlobUrl(blob?: Blob) {
-  if (!blob) return Promise.resolve('')
+export function getBlobUrl(blob?: Blob, gntUrl = false) {
+  if (!blob || !gntUrl) return Promise.resolve('')
 
   if (URL && URL.createObjectURL) {
     const url = URL.createObjectURL(blob)

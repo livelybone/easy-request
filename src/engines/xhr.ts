@@ -148,7 +148,7 @@ export class XhrDownload extends XhrBase<DownloadEngineConfig, DownloadResponse>
         withCredentials: true,
       },
       (blob: Blob) =>
-        getBlobUrl(blob).then(tempFilePath => {
+        getBlobUrl(blob, !!this.config.filePath).then(tempFilePath => {
           const headers = dealHeadersStr(
             this.requestInstance.getAllResponseHeaders(),
           )

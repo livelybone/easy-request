@@ -100,7 +100,7 @@ interface DownloadEngineConfig {
    * */
   timeout: RequestSharedConfig['timeout']
   /**
-   * 微信小程序配置，支付宝小程序、H5 中设置无效果
+   * 微信小程序配置，H5 中设置表示需要生成临时 url，支付宝小程序中设置无效果
    * */
   filePath: string
   convertFormDataOptions?: RequestSharedConfig['convertFormDataOptions']
