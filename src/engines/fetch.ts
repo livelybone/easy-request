@@ -95,10 +95,12 @@ function dealRequest<T>(ctx: any) {
         : responseType === 'arraybuffer'
         ? response.arrayBuffer()
         : response.text(),
-    ).then(data => {
-      ctx.response.data = data
-      return ctx.response
-    })
+    )
+      .catch(() => null)
+      .then(data => {
+        ctx.response.data = data
+        return ctx.response
+      })
   }) as Promise<RequestResponse<T>>
 }
 
