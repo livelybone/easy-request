@@ -228,6 +228,8 @@ declare class FetchUpload<T>
   extends FetchBase<UploadEngineConfig, RequestResponse<T>>
   implements RequestEngine<UploadEngineConfig, RequestResponse<T>> {
   open<T = any>(): Promise<RequestResponse<T>>
+
+  getConfig(): any
 }
 
 declare class MYBase<Config, Response> extends BaseEngine<Config, Response> {
@@ -429,7 +431,11 @@ declare class Http {
   uploadFile<T extends any = any>(
     options: Partial<UploadEngineConfig> &
       Pick<UploadEngineConfig, 'url' | 'file' | 'fileKey'>,
-  ): Promise<T>
+  ): Promise<
+    RequestResponse<any> & {
+      $request: any
+    }
+  >
 
   get<T extends any = any>(
     url: string,
