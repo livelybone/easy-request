@@ -173,4 +173,24 @@ export class FetchUpload<T>
 
     return dealRequest<T>(this)
   }
+
+  getConfig() {
+    return getOptions(
+      {
+        ...this.config,
+        data: {
+          ...this.config.extraData,
+          [this.config.fileKey]: this.config.file,
+        },
+        method: 'POST',
+        responseType: 'json',
+        withCredentials: true,
+        headers: {
+          ...this.config.headers,
+          'Content-Type': 'multipart/form-data',
+        },
+      },
+      this.requestTask,
+    )
+  }
 }

@@ -180,7 +180,7 @@ export class Http {
   uploadFile<T extends any = any>(
     options: Partial<UploadEngineConfig> &
       Pick<UploadEngineConfig, 'url' | 'file' | 'fileKey'>,
-  ): Promise<T> {
+  ) {
     return this.calcConfig(options).then(config => {
       const request = this.getUploadInstance(config)
       return request
@@ -189,7 +189,7 @@ export class Http {
         .catch(e => {
           e.$request = request
           return Promise.reject(e)
-        }) as any
+        })
     })
   }
 
