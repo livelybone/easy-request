@@ -62,6 +62,11 @@ interface RequestSharedConfig {
     customConvertFn?(data: Exclude<RequestData, FormData>): FormData
   }
 
+  /**
+   * Default: status => status === undefined || (200 <= status < 300)
+   * */
+  statusValidator?(status?: number): boolean
+
   [key: string]: any
 
   [key: number]: any
@@ -82,7 +87,7 @@ interface RequestConfig extends RequestSharedConfig {
   baseURL: string
 }
 
-interface RequestResponse<T = any> {
+interface RequestResponse<T> {
   /** api url */
   url: string
   data: T
@@ -387,13 +392,9 @@ declare class Http {
     config: DownloadEngineConfig,
   ): FetchDownload | MYDownload | WXDownload | XhrDownload
 
-  getUploadInstance(
+  getUploadInstance<T>(
     config: UploadEngineConfig,
-  ):
-    | WXUpload<unknown>
-    | MYUpload<unknown>
-    | FetchUpload<unknown>
-    | XhrUpload<unknown>
+  ): WXUpload<T> | MYUpload<T> | FetchUpload<T> | XhrUpload<T>
 
   static createError(object: any, request: RequestEngine<any>): RequestError
 
@@ -407,6 +408,12 @@ declare class Http {
         $request: any
       }
     : T
+
+  checkStatus<
+    T extends {
+      statusCode: number
+    }
+  >(res: T): Promise<T>
 
   request<T extends any = any>(
     url: string,
@@ -432,7 +439,7 @@ declare class Http {
     options: Partial<UploadEngineConfig> &
       Pick<UploadEngineConfig, 'url' | 'file' | 'fileKey'>,
   ): Promise<
-    RequestResponse<any> & {
+    RequestResponse<T> & {
       $request: any
     }
   >

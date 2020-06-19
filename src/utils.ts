@@ -77,6 +77,10 @@ export function mergeHeaders(
   )
 }
 
+function statusValidator(status?: number) {
+  return status === undefined || (status >= 200 && status < 300)
+}
+
 export function mergeConfig<T1 extends RequestConfig, T2 extends any>(
   conf1: T1,
   conf2?: T2,
@@ -85,6 +89,10 @@ export function mergeConfig<T1 extends RequestConfig, T2 extends any>(
     ...conf1,
     ...conf2,
     headers: mergeHeaders(conf1.headers, conf2 && conf2.headers),
+    statusValidator:
+      (conf2 && conf2.statusValidator) ||
+      conf1.statusValidator ||
+      statusValidator,
   }
 
   config.method = config.method.toUpperCase()

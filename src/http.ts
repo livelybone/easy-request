@@ -80,14 +80,14 @@ export class Http {
       : new XhrDownload(config)
   }
 
-  getUploadInstance(config: UploadEngineConfig) {
+  getUploadInstance<T>(config: UploadEngineConfig) {
     return this.engineName === EngineName.WX
-      ? new WXUpload(config)
+      ? new WXUpload<T>(config)
       : this.engineName === EngineName.MY
-      ? new MYUpload(config)
+      ? new MYUpload<T>(config)
       : this.engineName === EngineName.Fetch
-      ? new FetchUpload(config)
-      : new XhrUpload(config)
+      ? new FetchUpload<T>(config)
+      : new XhrUpload<T>(config)
   }
 
   static createError(object: any, request: RequestEngine<any>): $RequestError {
@@ -122,6 +122,13 @@ export class Http {
     return result as any
   }
 
+  checkStatus<T extends { statusCode: number }>(res: T) {
+    if (!this.config.statusValidator!(res.statusCode)) {
+      return Promise.reject(res)
+    }
+    return Promise.resolve(res)
+  }
+
   request<T extends any = any>(
     url: string,
     data?: RequestData,
@@ -135,7 +142,9 @@ export class Http {
         return interceptors.resolves.reduce(
           (pre, cb) =>
             pre.then(cb).then(res => Http.dealResponse(res, request)),
-          Promise.resolve(Http.dealResponse(response, request)),
+          Promise.resolve(
+            this.checkStatus(Http.dealResponse(response, request)),
+          ),
         )
       }
       const reject = (e: any) => {
@@ -166,7 +175,7 @@ export class Http {
       const request = this.getDownloadInstance(config)
       return request
         .open()
-        .then(res => Http.dealResponse(res, request))
+        .then(res => this.checkStatus(Http.dealResponse(res, request)))
         .catch(e => {
           e.$request = request
           return Promise.reject(e)
@@ -182,10 +191,9 @@ export class Http {
       Pick<UploadEngineConfig, 'url' | 'file' | 'fileKey'>,
   ) {
     return this.calcConfig(options).then(config => {
-      const request = this.getUploadInstance(config)
-      return request
-        .open()
-        .then((res: RequestResponse) => Http.dealResponse(res, request))
+      const request = this.getUploadInstance<T>(config)
+      return (request.open() as Promise<RequestResponse<T>>)
+        .then(res => this.checkStatus(Http.dealResponse(res, request)))
         .catch(e => {
           e.$request = request
           return Promise.reject(e)

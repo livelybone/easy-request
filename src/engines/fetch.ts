@@ -82,7 +82,7 @@ function dealRequest<T>(ctx: any) {
   return ctx.requestInstance(url, config).then((response: any) => {
     ctx.response = {
       url: response.url || url,
-      statusCode: response.status,
+      statusCode: response.status || 200,
       headers: response.headers,
       data: null,
     }
@@ -146,7 +146,7 @@ export class FetchDownload
             blob,
             tempFilePath,
             filePath: this.config.filePath,
-            statusCode: response.status,
+            statusCode: response.status || 200,
             headers,
             filename,
           }

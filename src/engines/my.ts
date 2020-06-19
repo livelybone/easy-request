@@ -75,7 +75,7 @@ export class MY<T> extends MYBase<RequestEngineConfig, RequestResponse<T>>
             ...res,
             url: res.url || this.config.url,
             data: strJsonParse(res.data),
-            statusCode: res.status,
+            statusCode: res.statusCode || res.status || 200,
             headers: res.header || res.headers,
           }
           resolve(this.response as RequestResponse<T>)
@@ -126,7 +126,7 @@ export class MYDownload extends MYBase<DownloadEngineConfig, DownloadResponse>
             url: res.url || this.config.url,
             tempFilePath: res.tempFilePath,
             filePath: this.config.filePath,
-            statusCode: 200,
+            statusCode: res.statusCode || res.status || 200,
           } as DownloadResponse
           resolve(this.response)
         },
@@ -177,7 +177,7 @@ export class MYUpload<T> extends MYBase<UploadEngineConfig, RequestResponse<T>>
             url: res.url || this.config.url,
             data: strJsonParse(res.data),
             headers: res.header || res.headers,
-            statusCode: res.statusCode || 200,
+            statusCode: res.statusCode || res.status || 200,
           } as RequestResponse<T>
           resolve(this.response)
         },

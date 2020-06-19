@@ -59,6 +59,11 @@ export interface RequestSharedConfig {
     customConvertFn?(data: Exclude<RequestData, FormData>): FormData
   }
 
+  /**
+   * Default: status => status === undefined || (200 <= status < 300)
+   * */
+  statusValidator?(status?: number): boolean
+
   [key: string]: any
 
   [key: number]: any
@@ -78,7 +83,7 @@ export interface RequestConfig extends RequestSharedConfig {
   baseURL: string
 }
 
-export interface RequestResponse<T = any> {
+export interface RequestResponse<T> {
   /** api url */
   url: string
   data: T
