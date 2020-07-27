@@ -13,8 +13,9 @@ import {
   RequestError as $RequestError,
   RequestResponse,
   UploadEngineConfig,
+  DownloadResponse,
 } from './type'
-import { getMsg, joinUrl, mergeConfig } from './utils'
+import { getMsg, joinUrl, mergeConfig, RequestPromise } from './utils'
 
 export class Http {
   engineName = EngineName.XHR
@@ -52,12 +53,41 @@ export class Http {
   }
 
   calcConfig(config?: any) {
-    const $config = mergeConfig(this.config, config)
+    let $config = mergeConfig(this.config, config)
     const $url = joinUrl($config.baseURL, config.url)
-    return this.interceptors.request.interceptors.reduce(
-      (pre, cb) => pre.then(it => Promise.resolve(cb(it))),
-      Promise.resolve({ ...$config, url: $url }),
-    )
+    let abort: () => void = () => {}
+    const conf = new Promise<any>((res, rej) => {
+      this.interceptors.request.interceptors
+        .reduce((pre, cb) => {
+          return pre.then(it => {
+            $config = it
+            return Promise.resolve(cb(it))
+          })
+        }, Promise.resolve({ ...$config, url: $url }))
+        .then(res)
+      abort = () =>
+        rej(
+          Http.createError(
+            {
+              $request: {
+                config: $config,
+                name: this.engineName,
+                requestInstance: null,
+                requestTask: null,
+                response: null,
+                aborted: true,
+              },
+              data: null,
+              statusCode: 0,
+              url: $url,
+              headers: {},
+            },
+            undefined,
+            'Request aborted while processing configuration',
+          ),
+        )
+    })
+    return { config: conf, abort }
   }
 
   getRequestInstance(config: RequestEngineConfig) {
@@ -90,13 +120,23 @@ export class Http {
       : new XhrUpload<T>(config)
   }
 
-  static createError(object: any, request: RequestEngine<any>): $RequestError {
+  static createError(
+    object: any,
+    request?: RequestEngine<any>,
+    msg?: string,
+  ): $RequestError {
     // eslint-disable-next-line no-shadow
     function RequestError() {}
 
     let message = getMsg(object)
     if (!message) {
-      message = getMsg(object.data, 'Network request error: unknown message!')
+      message = getMsg(
+        object.data,
+        msg ||
+          (request && request.aborted
+            ? 'Request aborted'
+            : 'Network request error: unknown message!'),
+      )
     }
 
     RequestError.prototype = new Error(message)
@@ -108,7 +148,7 @@ export class Http {
         obj[k] = object[k]
       })
     }
-    obj.$request = request
+    if (request) obj.$request = request
     return obj
   }
 
@@ -117,7 +157,7 @@ export class Http {
     request: any,
   ): T extends { [k in string | number]: any } ? T & { $request: any } : T {
     if (typeof result === 'object' && result !== null) {
-      result.$request = request
+      ;(result as any).$request = request
     }
     return result as any
   }
@@ -133,36 +173,55 @@ export class Http {
     url: string,
     data?: RequestData,
     options?: Partial<RequestConfig>,
-  ): Promise<T> {
+  ) {
     const { interceptors } = this.interceptors.response
 
-    return this.calcConfig({ ...options, url, data }).then(config => {
-      const request = this.getRequestInstance(config)
-      const resolve = (response: any) => {
-        return interceptors.resolves.reduce(
-          (pre, cb) =>
-            pre.then(cb).then(res => Http.dealResponse(res, request)),
-          Promise.resolve(
-            this.checkStatus(Http.dealResponse(response, request)),
-          ),
-        )
-      }
-      const reject = (e: any) => {
-        return interceptors.rejects
-          .reduce(
+    const { config: conf, abort } = this.calcConfig({ ...options, url, data })
+    let $res: any
+    let $rej: any
+    const req: RequestPromise<T> = new RequestPromise((res, rej) => {
+      $res = res
+      $rej = rej
+    }) as any
+    req.abort = abort
+
+    conf
+      .then(config => {
+        const request = this.getRequestInstance(config)
+        req.abort = () => {
+          request.abort()
+          request.aborted = true
+        }
+
+        const resolve = (response: any) => {
+          return interceptors.resolves.reduce(
             (pre, cb) =>
-              pre
-                .then(res => Promise.reject(res))
-                .catch(result => cb(Http.createError(result, request))),
-            Promise.resolve(Http.createError(e, request)),
+              pre.then(cb).then(res => Http.dealResponse(res, request)),
+            Promise.resolve(
+              this.checkStatus(Http.dealResponse(response, request)),
+            ),
           )
-          .then(res => Promise.reject(res))
-      }
-      return request
-        .open()
-        .then(resolve)
-        .catch(reject) as any
-    })
+        }
+        const reject = (e: any) => {
+          return interceptors.rejects
+            .reduce(
+              (pre, cb) =>
+                pre
+                  .then(res => Promise.reject(res))
+                  .catch(result => cb(Http.createError(result, request))),
+              Promise.resolve(Http.createError(e, request)),
+            )
+            .then(res => Promise.reject(res))
+        }
+        request
+          .open()
+          .then(resolve)
+          .then($res)
+          .catch(reject)
+          .catch($rej)
+      })
+      .catch($rej)
+    return req
   }
 
   /**
@@ -171,16 +230,37 @@ export class Http {
   downloadFile(
     options: Partial<DownloadEngineConfig> & Pick<DownloadEngineConfig, 'url'>,
   ) {
-    return this.calcConfig(options).then(config => {
-      const request = this.getDownloadInstance(config)
-      return request
-        .open()
-        .then(res => this.checkStatus(Http.dealResponse(res, request)))
-        .catch(e => {
-          e.$request = request
-          return Promise.reject(e)
-        })
-    })
+    const { config: conf, abort } = this.calcConfig(options)
+    let $res: any
+    let $rej: any
+    const req: RequestPromise<DownloadResponse & {
+      $request: any
+    }> = new RequestPromise((res, rej) => {
+      $res = res
+      $rej = rej
+    }) as any
+    req.abort = abort
+
+    conf
+      .then(config => {
+        const request = this.getDownloadInstance(config)
+        req.abort = () => {
+          request.abort()
+          request.aborted = true
+        }
+
+        request
+          .open()
+          .then(res => this.checkStatus(Http.dealResponse(res, request)))
+          .then($res)
+          .catch(e => {
+            e.$request = request
+            return Promise.reject(e)
+          })
+          .catch($rej)
+      })
+      .catch($rej)
+    return req
   }
 
   /**
@@ -190,15 +270,35 @@ export class Http {
     options: Partial<UploadEngineConfig> &
       Pick<UploadEngineConfig, 'url' | 'file' | 'fileKey'>,
   ) {
-    return this.calcConfig(options).then(config => {
-      const request = this.getUploadInstance<T>(config)
-      return (request.open() as Promise<RequestResponse<T>>)
-        .then(res => this.checkStatus(Http.dealResponse(res, request)))
-        .catch(e => {
-          e.$request = request
-          return Promise.reject(e)
-        })
-    })
+    const { config: conf, abort } = this.calcConfig(options)
+    let $res: any
+    let $rej: any
+    const req: RequestPromise<RequestResponse<T> & {
+      $request: any
+    }> = new RequestPromise((res, rej) => {
+      $res = res
+      $rej = rej
+    }) as any
+    req.abort = abort
+
+    conf
+      .then(config => {
+        const request = this.getUploadInstance<T>(config)
+        req.abort = () => {
+          request.abort()
+          request.aborted = true
+        }
+        ;(request.open() as Promise<RequestResponse<T>>)
+          .then(res => this.checkStatus(Http.dealResponse(res, request)))
+          .then($res)
+          .catch(e => {
+            e.$request = request
+            return Promise.reject(e)
+          })
+          .catch($rej)
+      })
+      .catch($rej)
+    return req
   }
 
   get<T extends any = any>(

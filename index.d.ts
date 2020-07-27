@@ -166,6 +166,7 @@ interface RequestEngine<Config = RequestEngineConfig, Response = any> {
   response: Response | RequestResponse<null>
   requestInstance: any
   requestTask: any
+  aborted: boolean
 
   open(): Promise<Response>
 
@@ -175,7 +176,7 @@ interface RequestEngine<Config = RequestEngineConfig, Response = any> {
 declare type ConfigInterceptor = (config: any) => any
 declare type ResponseInterceptor = (response: any) => any
 declare type RequestError = Error & {
-  $request: RequestEngine<any>
+  $request?: RequestEngine<any>
   [key: string]: any
   [key: number]: any
 }
@@ -203,6 +204,8 @@ declare class BaseEngine<Config, Response> {
   requestTask: any
 
   response: Response | RequestResponse<null>
+
+  aborted: boolean
 
   constructor(config: Config)
 }
@@ -373,6 +376,39 @@ declare class XhrUpload<T>
   open(): Promise<RequestResponse<T>>
 }
 
+declare class RequestPromise<T extends any> {
+  promise: Promise<T>
+
+  abort: () => void
+
+  constructor(
+    cb: (
+      resolve: (value?: T | PromiseLike<T>) => void,
+      reject: (reason?: any) => void,
+    ) => void,
+  )
+
+  then<TResult1 = T, TResult2 = never>(
+    onfulfilled?:
+      | ((value: T) => TResult1 | PromiseLike<TResult1>)
+      | undefined
+      | null,
+    onrejected?:
+      | ((reason: any) => TResult2 | PromiseLike<TResult2>)
+      | undefined
+      | null,
+  ): RequestPromise<TResult1 | TResult2>
+
+  catch<TResult = never>(
+    onrejected?:
+      | ((reason: any) => TResult | PromiseLike<TResult>)
+      | undefined
+      | null,
+  ): RequestPromise<T | TResult>
+
+  finally(cb: () => void): RequestPromise<T>
+}
+
 declare class Http {
   engineName: EngineName
 
@@ -382,7 +418,12 @@ declare class Http {
 
   constructor(engineName?: EngineName, config?: Partial<RequestConfig>)
 
-  calcConfig(config?: any): Promise<any>
+  calcConfig(
+    config?: any,
+  ): {
+    config: Promise<any>
+    abort: () => void
+  }
 
   getRequestInstance(
     config: RequestEngineConfig,
@@ -396,7 +437,11 @@ declare class Http {
     config: UploadEngineConfig,
   ): WXUpload<T> | MYUpload<T> | FetchUpload<T> | XhrUpload<T>
 
-  static createError(object: any, request: RequestEngine<any>): RequestError
+  static createError(
+    object: any,
+    request?: RequestEngine<any>,
+    msg?: string,
+  ): RequestError
 
   static dealResponse<T extends any>(
     result: T,
@@ -419,14 +464,14 @@ declare class Http {
     url: string,
     data?: RequestData,
     options?: Partial<RequestConfig>,
-  ): Promise<T>
+  ): RequestPromise<T>
 
   /**
    * 对应微信/支付宝小程序的 downloadFile
    * */
   downloadFile(
     options: Partial<DownloadEngineConfig> & Pick<DownloadEngineConfig, 'url'>,
-  ): Promise<
+  ): RequestPromise<
     DownloadResponse & {
       $request: any
     }
@@ -438,7 +483,7 @@ declare class Http {
   uploadFile<T extends any = any>(
     options: Partial<UploadEngineConfig> &
       Pick<UploadEngineConfig, 'url' | 'file' | 'fileKey'>,
-  ): Promise<
+  ): RequestPromise<
     RequestResponse<T> & {
       $request: any
     }
@@ -450,7 +495,7 @@ declare class Http {
     options?: Partial<
       Pick<RequestConfig, Exclude<keyof RequestConfig, 'method'>>
     >,
-  ): Promise<T>
+  ): RequestPromise<T>
 
   post<T extends any = any>(
     url: string,
@@ -458,7 +503,7 @@ declare class Http {
     options?: Partial<
       Pick<RequestConfig, Exclude<keyof RequestConfig, 'method'>>
     >,
-  ): Promise<T>
+  ): RequestPromise<T>
 
   put<T extends any = any>(
     url: string,
@@ -466,7 +511,7 @@ declare class Http {
     options?: Partial<
       Pick<RequestConfig, Exclude<keyof RequestConfig, 'method'>>
     >,
-  ): Promise<T>
+  ): RequestPromise<T>
 
   delete<T extends any = any>(
     url: string,
@@ -474,7 +519,7 @@ declare class Http {
     options?: Partial<
       Pick<RequestConfig, Exclude<keyof RequestConfig, 'method'>>
     >,
-  ): Promise<T>
+  ): RequestPromise<T>
 }
 
 export default Http
@@ -493,6 +538,7 @@ export {
   RequestEngine,
   RequestEngineConfig,
   RequestError,
+  RequestPromise,
   RequestResponse,
   RequestSharedConfig,
   ResponseInterceptor,

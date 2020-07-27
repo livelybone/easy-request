@@ -15,15 +15,15 @@ var module = document.getElementById('module')
 
 const { Http, EngineName } = EasyRequest
 
-const http = new Http(EngineName.Fetch)
+const http = new Http(EngineName.XHR)
 
 http.interceptors.request.use(config => {
-  console.log(config)
+  console.log('request interceptor', config)
   return config
 })
 
 http.interceptors.response.use(res => {
-  console.log(res)
+  console.log('response interceptor', res)
   return res.data
 })
 
@@ -38,11 +38,16 @@ http.post('a', { a: { b: 1 }, v: [{ a: 1 }, { b: 2 }] }, {
 }).catch(e => {
   console.log(e, e.$request)
 })
-http.post('b', data, {
+const req = http.post('b', data, {
   headers: { 'content-type': 'multipart/form-data' },
   convertFormDataOptions: { indices: false },
-}).catch(e => {
-  console.log(e, e.$request)
+})
+req.abort()
+setTimeout(() => {
+  req.abort()
+})
+req.catch(e => {
+  console.log('', e, e.$request)
 })
 </script>
 </body>

@@ -1,6 +1,6 @@
 {
   "name": "@livelybone/easy-request",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "A easy-to-use http request library to support all javascript runtime environments. 一个以支持所有JavaScript运行环境为目的、简单易用的http请求库。",
   "main": "./lib/umd/index.js",
   "module": "./lib/es/index.js",

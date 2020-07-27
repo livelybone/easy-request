@@ -81,10 +81,10 @@ function statusValidator(status?: number) {
   return status === undefined || (status >= 200 && status < 300)
 }
 
-export function mergeConfig<T1 extends RequestConfig, T2 extends any>(
-  conf1: T1,
-  conf2?: T2,
-): any {
+export function mergeConfig<
+  T1 extends RequestConfig,
+  T2 extends { [k: string]: any }
+>(conf1: T1, conf2?: T2): any {
   const config = {
     ...conf1,
     ...conf2,
@@ -131,4 +131,66 @@ export function getFileName(headers: DownloadResponse['headers']) {
   if (!disposition) return ''
   const matched = disposition.match(/(file)?name\s*=\s*([^=]+)($|,)/)
   return (matched && matched[2]) || ''
+}
+
+export class RequestPromise<T extends any> {
+  promise!: Promise<T>
+
+  abort: () => void = () => {}
+
+  constructor(
+    cb: (
+      resolve: (value?: T | PromiseLike<T>) => void,
+      reject: (reason?: any) => void,
+    ) => void,
+  ) {
+    this.promise = new Promise<T>(cb)
+  }
+
+  then<TResult1 = T, TResult2 = never>(
+    onfulfilled?:
+      | ((value: T) => TResult1 | PromiseLike<TResult1>)
+      | undefined
+      | null,
+    onrejected?:
+      | ((reason: any) => TResult2 | PromiseLike<TResult2>)
+      | undefined
+      | null,
+  ) {
+    const pro = new RequestPromise<TResult1 | TResult2>((res, rej) => {
+      this.promise.then(onfulfilled, onrejected).then(res, rej)
+    })
+    pro.abort = this.abort
+    return pro
+  }
+
+  catch<TResult = never>(
+    onrejected?:
+      | ((reason: any) => TResult | PromiseLike<TResult>)
+      | undefined
+      | null,
+  ) {
+    const pro = new RequestPromise<T | TResult>((res, rej) => {
+      this.promise.catch(onrejected).then(res, rej)
+    })
+    pro.abort = this.abort
+    return pro
+  }
+
+  finally(cb: () => void) {
+    const pro = new RequestPromise<T>((res, rej) => {
+      this.promise.then(
+        val => {
+          cb()
+          res(val)
+        },
+        e => {
+          cb()
+          rej(e)
+        },
+      )
+    })
+    pro.abort = this.abort
+    return pro
+  }
 }

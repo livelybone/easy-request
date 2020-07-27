@@ -14,6 +14,8 @@ export class BaseEngine<Config, Response> {
     headers: {},
   }
 
+  aborted = false
+
   constructor(config: Config) {
     this.config = config
   }

@@ -162,6 +162,7 @@ export interface RequestEngine<Config = RequestEngineConfig, Response = any> {
   response: Response | RequestResponse<null>
   requestInstance: any
   requestTask: any
+  aborted: boolean
 
   open(): Promise<Response>
 
@@ -171,7 +172,7 @@ export interface RequestEngine<Config = RequestEngineConfig, Response = any> {
 export type ConfigInterceptor = (config: any) => any
 export type ResponseInterceptor = (response: any) => any
 export type RequestError = Error & {
-  $request: RequestEngine<any>
+  $request?: RequestEngine<any>
   [key: string]: any
   [key: number]: any
 }
