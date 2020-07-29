@@ -104,6 +104,7 @@ export interface DownloadEngineConfig {
    * 微信小程序配置，H5 中设置表示需要生成临时 url，支付宝小程序中设置无效果
    * */
   filePath: string
+  withCredentials?: boolean
 
   convertFormDataOptions?: RequestSharedConfig['convertFormDataOptions']
 
@@ -148,6 +149,7 @@ export interface UploadEngineConfig {
    * */
   fileType?: 'image' | 'video' | 'audio'
   extraData: RequestData
+  withCredentials?: boolean
 
   convertFormDataOptions?: RequestSharedConfig['convertFormDataOptions']
 

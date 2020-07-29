@@ -145,15 +145,15 @@ export class XhrDownload extends XhrBase<DownloadEngineConfig, DownloadResponse>
         ...this.config,
         method: 'GET',
         responseType: 'blob',
-        withCredentials: true,
+        withCredentials: this.config.withCredentials || false,
       },
-      (blob: Blob) =>
+      (blob?: Blob) =>
         getBlobUrl(blob, !!this.config.filePath).then(tempFilePath => {
           const headers = dealHeadersStr(
             this.requestInstance.getAllResponseHeaders(),
           )
           const filename = getFileName(headers)
-          ;(blob as any).name = filename
+          if (blob) (blob as any).name = filename
           this.response = {
             url: this.config.url,
             tempFilePath,
@@ -185,7 +185,7 @@ export class XhrUpload<T>
         },
         method: 'POST',
         responseType: 'json',
-        withCredentials: true,
+        withCredentials: this.config.withCredentials || false,
         headers: {
           ...this.config.headers,
           'Content-Type': 'multipart/form-data',
